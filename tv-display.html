@@ -435,8 +435,16 @@ const TICKERS = [
   '毎日仕入れる新鮮食材',
 ];
 
+// ╔══════════════════════════════════════════════════╗
+// ║        SETUP — ここを設定してください              ║
+// ╚══════════════════════════════════════════════════╝
+const CONFIG = {
+  GAS_URL: '',   // Google Apps Script デプロイ URL を貼り付ける
+};
+// ════════════════════════════════════════════════════
+
 // ── DEMO DATA ────────────────────────────────────────────
-let demoQ = [
+const demoQ = [
   { id:'W-005', ppl:4, round:'12:30', status:'called',  calledAt:Date.now()-5*60000 },
   { id:'W-006', ppl:2, round:'12:30', status:'pre',     calledAt:null },
   { id:'W-007', ppl:3, round:'12:30', status:'waiting', calledAt:null },
@@ -450,12 +458,13 @@ const SEATS = [
   { t:'13:00', fill:22,  s:'free' },
 ];
 
-// Google Apps Script URL（デプロイ後に入力）
-const API = '';
+// ライブデータ (refreshPanel で更新される)
+let liveQ = [...demoQ];
 
 async function getData(){
-  if(!API) return { q:demoQ, seats:SEATS };
-  try{ const r=await fetch(API+'?action=getDashboard'); return await r.json(); }catch{ return {q:demoQ,seats:SEATS}; }
+  if(!CONFIG.GAS_URL) return { q:demoQ, seats:SEATS };
+  try{ const r=await fetch(CONFIG.GAS_URL+'?action=getDashboard'); return await r.json(); }
+  catch{ return {q:liveQ, seats:SEATS}; }
 }
 
 // ── VIDEO INIT ───────────────────────────────────────────
@@ -517,6 +526,7 @@ function updateClock(){
 let lastSig='', lastFC='';
 async function refreshPanel(){
   const {q,seats}=await getData();
+  liveQ=q; // ライブデータを更新
   const called=q.filter(x=>x.status==='called');
   const waiting=q.filter(x=>x.status==='waiting'||x.status==='pre');
 
@@ -572,7 +582,7 @@ async function refreshPanel(){
 // Countdown patch (no rebuild)
 function patchFC(){
   const fcT=document.getElementById('fc-timer');
-  const called=demoQ.filter(x=>x.status==='called'&&x.calledAt);
+  const called=liveQ.filter(x=>x.status==='called'&&x.calledAt);
   if(called.length&&fcT){
     const minR=Math.min(...called.map(x=>Math.max(0,600-Math.floor((Date.now()-x.calledAt)/1000))));
     const mm=String(Math.floor(minR/60)).padStart(2,'0');

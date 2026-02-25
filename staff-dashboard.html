@@ -270,6 +270,15 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 <div class="toasts" id="toasts"></div>
 
 <script>
+// ╔══════════════════════════════════════════════════╗
+// ║        SETUP — ここを設定してください              ║
+// ╚══════════════════════════════════════════════════╝
+const CONFIG = {
+  GAS_URL: '',   // Google Apps Script デプロイ URL を貼り付ける
+};
+// ════════════════════════════════════════════════════
+
+// GAS URL 未設定時のデモデータ
 let data=[
   {id:'W-003',ppl:3,time:'11:42',round:'12:30',status:'noshow', calledAt:null,note:''},
   {id:'W-004',ppl:2,time:'11:55',round:'12:30',status:'checkin',calledAt:null,note:''},
@@ -280,6 +289,29 @@ let data=[
   {id:'W-009',ppl:1,time:'12:28',round:'13:00',status:'waiting',calledAt:null,note:''},
 ];
 let nid=10, filter='all', rendered=[];
+
+// ── API ヘルパー ────────────────────────────────────
+async function apiCall(params){
+  if(!CONFIG.GAS_URL) return null;
+  try{
+    const url=CONFIG.GAS_URL+'?'+new URLSearchParams(params);
+    const r=await fetch(url);
+    return await r.json();
+  }catch(e){ return null; }
+}
+
+// ── サーバーからデータ取得・同期 ──────────────────────
+async function loadQueue(){
+  const result=await apiCall({action:'getDashboard'});
+  if(!result||!result.q) return;
+  data=result.q.map(q=>({
+    ...q,
+    calledAt:q.calledAt?Number(q.calledAt):null
+  }));
+  const maxNum=data.reduce((m,q)=>Math.max(m,parseInt(q.id.replace('W-',''))||0),0);
+  nid=maxNum+1;
+  rebuild();
+}
 
 const SLBL={
   waiting:'<span class="spill sp-w">お待ち中</span>',
@@ -361,22 +393,29 @@ function updateStats(){
 }
 
 // Actions
-function doCall(id){
+async function doCall(id){
   const q=data.find(x=>x.id===id);if(!q)return;
   q.status='called';q.calledAt=Date.now();rebuild();
-  toast(`📢 ${id} を呼び出しました — LINE通知送信済み`,'warning');
+  const res=await apiCall({action:'call',id});
+  toast(`📢 ${id} を呼び出しました${res&&res.ok?' — LINE通知送信済み':''}`, 'warning');
 }
-function doIn(id){
+async function doIn(id){
   const q=data.find(x=>x.id===id);if(!q)return;
-  q.status='checkin';rebuild();toast(`✓ ${id} ご入店完了`,'success');
+  q.status='checkin';rebuild();
+  await apiCall({action:'checkin',id});
+  toast(`✓ ${id} ご入店完了`,'success');
 }
-function doCancel(id){
+async function doCancel(id){
   const q=data.find(x=>x.id===id);if(!q)return;
-  q.status='noshow';rebuild();toast(`${id} 不来店として処理しました`,'error');
+  q.status='noshow';rebuild();
+  await apiCall({action:'cancel',id});
+  toast(`${id} 不来店として処理しました`,'error');
 }
-function doRestore(id){
+async function doRestore(id){
   const q=data.find(x=>x.id===id);if(!q)return;
-  q.status='waiting';q.calledAt=null;rebuild();toast(`${id} を待機列に戻しました`,'warning');
+  q.status='waiting';q.calledAt=null;rebuild();
+  await apiCall({action:'restore',id});
+  toast(`${id} を待機列に戻しました`,'warning');
 }
 function checkExpired(){
   let ch=false;
@@ -396,12 +435,17 @@ function setFilter(f,btn){
 // Modal
 function openModal(){document.getElementById('modal').classList.add('on')}
 function closeModal(){document.getElementById('modal').classList.remove('on')}
-function addQueue(){
+async function addQueue(){
   const ppl=parseInt(document.getElementById('mp').value);
   const round=document.getElementById('mr').value;
   const note=document.getElementById('mn').value;
   const n=new Date(), t=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
-  const id='W-'+String(nid++).padStart(3,'0');
+
+  let id;
+  const res=await apiCall({action:'addQueue',ppl,round,note});
+  if(res&&res.id){ id=res.id; }
+  else { id='W-'+String(nid++).padStart(3,'0'); }
+
   data.push({id,ppl,time:t,round,status:'waiting',calledAt:null,note});
   rebuild();closeModal();
   toast(`${id} を受付しました（${ppl}名 / ${round}の回）`,'success');
@@ -489,6 +533,8 @@ function updateClock(){
 // Init
 rebuild(); updateClock();
 setInterval(()=>{updateClock();checkExpired();patch();},1000);
+// GAS 接続時: 初回ロードと 30 秒ごと自動同期
+if(CONFIG.GAS_URL){ loadQueue(); setInterval(loadQueue,30000); }
 </script>
 </body>
 </html>

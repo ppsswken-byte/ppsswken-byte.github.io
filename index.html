@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>The Siam Heritage Tokyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;300;400;500;600&family=Noto+Sans+JP:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
 :root{
   --w:#FFFFFF;--ivory:#FAFAF8;--warm:#F5F2ED;--parchment:#EDE8DF;
@@ -389,8 +390,18 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 </div>
 
 <script>
+// ╔══════════════════════════════════════════════════╗
+// ║        SETUP — ここを設定してください              ║
+// ╚══════════════════════════════════════════════════╝
+const CONFIG = {
+  GAS_URL: '',   // Google Apps Script デプロイ URL を貼り付ける
+  LIFF_ID: '',   // LINE LIFF ID (例: '1234567890-AbCdEfGh')
+};
+// ════════════════════════════════════════════════════
+
 let selectedPpl=1, selectedRound='12:30', hasTicket=false;
 let ticketData={}, callTimer=null, callRemain=0;
+let lineUserId='', myTicketId='', pollTimer=null;
 
 // ── TABS ──────────────────────────────────────────────
 function showTab(id,el){
@@ -421,40 +432,72 @@ function selRound(r,btn){
   btn.classList.add('on');
 }
 
+// ── LIFF 初期化 ────────────────────────────────────────
+async function initLiff(){
+  if(!CONFIG.LIFF_ID) return;
+  try{
+    await liff.init({liffId:CONFIG.LIFF_ID});
+    if(!liff.isLoggedIn()){ liff.login(); return; }
+    const profile=await liff.getProfile();
+    lineUserId=profile.userId;
+  }catch(e){ console.warn('LIFF init failed:',e); }
+}
+
 // ── REGISTER ──────────────────────────────────────────
-function register(){
+async function register(){
   const btn=document.querySelector('.btn-submit');
   btn.disabled=true;
   btn.textContent='受付中…';
-  // Simulate API call (replace with real Apps Script call)
-  setTimeout(()=>{
-    const qNum='W-0'+String(Math.floor(Math.random()*90)+10);
-    const ahead=Math.floor(Math.random()*4);
-    const waitMin=ahead*5;
-    ticketData={num:qNum,ppl:selectedPpl,round:selectedRound,ahead,waitMin};
-    hasTicket=true;
 
-    // Populate ticket screen
-    document.getElementById('tc-num').textContent=qNum;
-    document.getElementById('tc-ppl').textContent=`${selectedPpl} 名様`;
-    document.getElementById('tc-round').textContent=`${selectedRound} の回`;
-    document.getElementById('tc-ahead').textContent=ahead===0?'なし（先頭）':`${ahead} 組`;
-    document.getElementById('tc-wait').textContent=ahead===0?'まもなくご案内':`約 ${waitMin} 分`;
+  // GAS URL 未設定 → デモモード
+  if(!CONFIG.GAS_URL){
+    setTimeout(()=>{
+      const qNum='W-0'+String(Math.floor(Math.random()*90)+10);
+      const ahead=Math.floor(Math.random()*4);
+      _showTicket(qNum,selectedPpl,selectedRound,ahead,ahead*5);
+      btn.disabled=false;
+      btn.innerHTML='🪷　整理券を受け取る';
+      showTab('ticket',document.querySelectorAll('.tab')[1]);
+    },1200);
+    return;
+  }
 
+  try{
+    const params=new URLSearchParams({
+      action:'register', ppl:selectedPpl, round:selectedRound, lineUserId
+    });
+    const r=await fetch(CONFIG.GAS_URL+'?'+params);
+    const d=await r.json();
+    if(d.error) throw new Error(d.error);
+    myTicketId=d.id;
+    _showTicket(d.id,selectedPpl,selectedRound,d.ahead,d.waitMin);
     btn.disabled=false;
     btn.innerHTML='🪷　整理券を受け取る';
     showTab('ticket',document.querySelectorAll('.tab')[1]);
-  },1200);
+    startPolling(d.id);
+  }catch(e){
+    alert('受付中にエラーが発生しました。\n'+e.message);
+    btn.disabled=false;
+    btn.innerHTML='🪷　整理券を受け取る';
+  }
 }
 
-// ── CALL SIMULATION (demo) ───────────────────────────
-// In production, poll Apps Script API every 30s and show banner when status==='called'
+function _showTicket(id,ppl,round,ahead,waitMin){
+  ticketData={num:id,ppl,round,ahead,waitMin};
+  hasTicket=true;
+  document.getElementById('tc-num').textContent=id;
+  document.getElementById('tc-ppl').textContent=`${ppl} 名様`;
+  document.getElementById('tc-round').textContent=`${round} の回`;
+  document.getElementById('tc-ahead').textContent=ahead===0?'なし（先頭）':`${ahead} 組`;
+  document.getElementById('tc-wait').textContent=ahead===0?'まもなくご案内':`約 ${waitMin} 分`;
+}
+
+// ── 呼び出しバナー表示 ─────────────────────────────────
 function simulateCall(){
   if(!hasTicket)return;
   callRemain=600;
   const banner=document.getElementById('called-banner');
   banner.classList.add('on');
-  // Update timeline
   document.getElementById('tl-pre').className='tl-step done';
   document.getElementById('tl-call').className='tl-step active';
   clearInterval(callTimer);
@@ -466,8 +509,30 @@ function simulateCall(){
     if(callRemain===0){ clearInterval(callTimer); banner.classList.remove('on'); }
   },1000);
 }
-// Demo: simulate call after 10s of having ticket (remove in production)
-setTimeout(simulateCall,10000);
+
+// ── ステータスポーリング (30秒ごと) ───────────────────
+function startPolling(id){
+  stopPolling();
+  pollTimer=setInterval(async()=>{
+    if(!CONFIG.GAS_URL||!id) return;
+    try{
+      const r=await fetch(CONFIG.GAS_URL+'?action=getTicket&id='+id);
+      const d=await r.json();
+      if(d.error) return;
+      if(d.status==='called'&&!document.getElementById('called-banner').classList.contains('on')){
+        simulateCall();
+      }
+      if(d.status==='waiting'||d.status==='pre'){
+        document.getElementById('tc-ahead').textContent=d.ahead===0?'なし（先頭）':`${d.ahead} 組`;
+        document.getElementById('tc-wait').textContent=d.ahead===0?'まもなくご案内':`約 ${d.waitMin} 分`;
+      }
+    }catch(e){}
+  },30000);
+}
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+// LIFF 初期化 (DOM 読み込み後)
+window.addEventListener('DOMContentLoaded',()=>{ initLiff(); });
 </script>
 </body>
 </html>
