@@ -28,7 +28,7 @@
 //
 // ═══════════════════════════════════════════════════════════
 
-const SPREADSHEET_ID = ''; // ← スプレッドシート ID をここに入力
+const SPREADSHEET_ID = '1hHlXnqnjaqia0SANh8IkCs5A7nP31FUi0TbpH1j-8og';
 
 // ── メインエントリーポイント ─────────────────────────────
 function doGet(e) {
