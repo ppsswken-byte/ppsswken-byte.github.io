@@ -81,36 +81,38 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 
 /* ── TABLE ── */
 .qtable{background:var(--w);border:1px solid var(--border);border-radius:3px;overflow:hidden;box-shadow:var(--shadow)}
-.t-head{display:grid;grid-template-columns:78px 58px 78px 98px 1fr 200px;padding:9px 20px;background:var(--warm);border-bottom:1px solid var(--border);font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;letter-spacing:2px;color:var(--text-dim)}
-.qrow{display:grid;grid-template-columns:78px 58px 78px 98px 1fr 200px;padding:13px 20px;border-bottom:1px solid var(--border);align-items:center;transition:background .14s}
+.t-head{display:grid;grid-template-columns:90px 68px 88px 110px 1fr 220px;padding:11px 22px;background:var(--warm);border-bottom:1px solid var(--border);font-family:'Noto Serif JP',serif;font-weight:200;font-size:13px;letter-spacing:2px;color:var(--text-dim)}
+.qrow{display:grid;grid-template-columns:90px 68px 88px 110px 1fr 220px;padding:18px 22px;border-bottom:1px solid var(--border);align-items:center;transition:background .14s}
 .qrow:hover{background:var(--warm)}
 .qrow:last-child{border-bottom:none}
 .qrow.called{background:rgba(168,132,58,.04);border-left:2px solid var(--gold)}
-.qrow.done{opacity:.4}
+.qrow.done{opacity:1;background:rgba(139,58,47,.04)}
 .qrow.new{animation:rslide .3s ease}
 @keyframes rslide{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:translateX(0)}}
-.q-num{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
-.q-ppl{font-family:'Noto Serif JP',serif;font-weight:300;font-size:13px;text-align:center}
-.q-time{font-family:'Cormorant Garamond',serif;font-size:13px;color:var(--text-dim)}
-.q-round{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--br-light)}
+.q-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
+.q-ppl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:18px;text-align:center}
+.q-time{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--text-dim)}
+.q-round{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;color:var(--br-light)}
 
 /* Status pills */
-.spill{display:inline-flex;align-items:center;gap:4px;padding:3px 11px;border-radius:2px;font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;letter-spacing:1px}
+.spill{display:inline-flex;align-items:center;gap:4px;padding:5px 14px;border-radius:2px;font-family:'Noto Serif JP',serif;font-weight:300;font-size:13px;letter-spacing:1px}
 .sp-w{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(28,74,110,.18)}
 .sp-p{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(168,132,58,.25)}
 .sp-c{background:var(--gold-dim);color:var(--gold);border:1px solid rgba(168,132,58,.3)}
 .sp-in{background:var(--green-dim);color:var(--green);border:1px solid rgba(45,107,74,.22)}
 .sp-ns{background:var(--red-dim);color:var(--red);border:1px solid rgba(139,58,47,.18)}
+.qrow.done .q-num{text-decoration:line-through;color:var(--text-dim)}
+.qrow.done .q-ppl{color:var(--text-dim)}
 
 /* Countdown */
-.cd{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--red)}
+.cd{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;color:var(--red)}
 .cd.ok{color:var(--gold)}
 .mini-bar{width:100%;height:2px;background:var(--parchment);border-radius:1px;margin-top:3px;overflow:hidden}
 .mini-fill{height:100%;background:var(--gold);border-radius:1px;transition:width 1s linear}
 
 /* Actions */
 .q-acts{display:flex;gap:5px;justify-content:flex-end}
-.abtn{padding:5px 11px;border-radius:2px;border:1px solid var(--border);font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;letter-spacing:1px;cursor:pointer;background:var(--w);transition:all .14s;white-space:nowrap}
+.abtn{padding:8px 16px;border-radius:2px;border:1px solid var(--border);font-family:'Noto Serif JP',serif;font-weight:300;font-size:14px;letter-spacing:1px;cursor:pointer;background:var(--w);transition:all .14s;white-space:nowrap}
 .a-print{color:var(--blue);border-color:rgba(28,74,110,.2);background:var(--blue-dim)}
 .a-call{color:var(--ivory);background:var(--gold);border-color:var(--gold);font-weight:400}
 .a-call:hover{background:var(--br-mid);border-color:var(--br-mid)}
