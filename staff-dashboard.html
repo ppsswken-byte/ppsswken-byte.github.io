@@ -71,6 +71,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 /* Add btn */
 .btn-add{width:100%;padding:12px;background:var(--br-mid);color:var(--ivory);border:none;border-radius:3px;font-family:'Noto Sans JP',sans-serif;font-weight:400;font-size:12px;letter-spacing:3px;cursor:pointer;transition:background .18s;display:flex;align-items:center;justify-content:center;gap:8px}
 .btn-add:hover{background:var(--br-deep)}
+.btn-reset{width:100%;margin-top:7px;padding:9px;background:transparent;color:var(--red);border:1px solid rgba(185,86,74,.3);border-radius:3px;font-family:'Noto Sans JP',sans-serif;font-weight:400;font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .18s}
+.btn-reset:hover{background:rgba(185,86,74,.06)}
 
 /* ── MAIN ── */
 .main{padding:22px;overflow-y:auto}
@@ -208,6 +210,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     </div>
 
     <button class="btn-add" onclick="openModal()">＋　ウォークイン　新規受付</button>
+    <button class="btn-reset" onclick="confirmReset()">↺　本日の番号をリセット</button>
   </div>
 
   <div class="main">
@@ -239,16 +242,29 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
   <div class="modal">
     <div class="modal-title">ウォークイン　新規受付</div>
     <div class="mfield"><label>ご人数</label><input type="number" id="mp" value="2" min="1" max="20"></div>
+    <div class="mfield"><label>ご利用スタイル</label>
+      <select id="mcourse">
+        <option value="buffet">ブッフェ（食べ放題）</option>
+        <option value="alacarte">アラカルト（単品）</option>
+      </select>
+    </div>
     <div class="mfield"><label>ご希望の回</label>
       <select id="mr">
         <option value="11:00">11:00 の回</option>
         <option value="11:30">11:30 の回</option>
-        <option value="12:30" selected>12:30 の回</option>
-        <option value="13:00">13:00 の回</option>
+        <option value="12:30-40" selected>12:30-40 の回</option>
         <option value="13:10">13:10 の回（土日祝）</option>
       </select>
     </div>
-    <div class="mfield"><label>備考（任意）</label><input type="text" id="mn" placeholder="例：お子様連れ、車椅子ご利用など"></div>
+    <div class="mfield"><label>車椅子・ベビーカー</label>
+      <select id="mwc">
+        <option value="0">なし</option>
+        <option value="1">1台</option>
+        <option value="2">2台</option>
+        <option value="3">3台以上</option>
+      </select>
+    </div>
+    <div class="mfield"><label>備考（任意）</label><input type="text" id="mn" placeholder="例：アレルギー、その他連絡事項など"></div>
     <div class="m-acts">
       <button class="btn-cl" onclick="closeModal()">キャンセル</button>
       <button class="btn-ok" onclick="addQueue()">受付する</button>
@@ -491,18 +507,28 @@ function closeModal(){document.getElementById('modal').classList.remove('on')}
 async function addQueue(){
   const ppl=parseInt(document.getElementById('mp').value);
   const round=document.getElementById('mr').value;
+  const wheelchair=parseInt(document.getElementById('mwc').value)||0;
+  const courseType=document.getElementById('mcourse').value||'buffet';
   const note=document.getElementById('mn').value;
   const n=new Date(), t=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
 
   let id;
-  const res=await apiCall({action:'addQueue',ppl,round,note});
+  const res=await apiCall({action:'addQueue',ppl,round,note,wheelchair,courseType});
   if(res&&res.id){ id=res.id; }
   else { id='W-'+String(nid++).padStart(3,'0'); }
 
-  data.push({id,ppl,time:t,round,status:'waiting',calledAt:null,note});
+  const fullNote=[wheelchair>0?`車椅子×${wheelchair}`:'', courseType==='alacarte'?'アラカルト':'', note].filter(Boolean).join(' ');
+  data.push({id,ppl,time:t,round,status:'waiting',calledAt:null,note:fullNote});
   rebuild();closeModal();
   toast(`${id} を受付しました（${ppl}名 / ${round}の回）`,'success');
   openPM(id);
+}
+
+async function confirmReset(){
+  if(!confirm('本日の整理券番号をリセットします。\n（翌日の営業開始前に実行してください）\nよろしいですか？')) return;
+  const res=await apiCall({action:'resetCounter'});
+  if(res&&res.ok){ nid=1; toast('整理券番号をリセットしました','success'); }
+  else toast('リセットに失敗しました','error');
 }
 
 // Print
@@ -531,7 +557,7 @@ function ticketHTML(q,ds,ts,ah){
   <div class="trow"><span class="tlbl">前のお客様</span><span>${ah} 組</span></div>
   <div class="trow"><span class="tlbl">目安待ち時間</span><span>約 ${ah*5} 分</span></div>
   <div class="trow"><span class="tlbl">受付時刻</span><span>${ts}</span></div>
-  ${q.note?`<div class="trow"><span class="tlbl">備考</span><span>${q.note}</span></div>`:''}
+  ${q.note?`<div class="trow"><span class="tlbl">備考</span><span style="font-size:9px">${q.note}</span></div>`:''}
   <div class="tdiv"></div>
   <div class="tft">LINEにてご案内いたします</div>
   <div class="tft">ご案内後 10分以内にお越しください</div>`;

@@ -92,6 +92,20 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 .avail-ok{color:var(--green)}.avail-lim{color:var(--gold)}.avail-ng{color:var(--red)}
 .rb-check{font-size:16px;opacity:0;transition:opacity .15s;margin-left:10px}
 .round-btn.on .rb-check{opacity:1}
+.round-btn.ng{opacity:.5;cursor:not-allowed;pointer-events:none}
+
+/* Wheelchair / course selectors */
+.wc-row{display:flex;align-items:center;gap:10px;margin-top:6px}
+.wc-lbl{font-family:'Noto Serif JP',sans-serif;font-size:11px;color:var(--text-dim);letter-spacing:1px;white-space:nowrap}
+.wc-btns{display:flex;gap:6px;flex-wrap:wrap}
+.wc-btn{padding:6px 12px;border:1px solid var(--border);border-radius:3px;background:var(--warm);cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-size:11px;color:var(--br-mid);transition:all .15s}
+.wc-btn.on{border-color:var(--br-mid);background:rgba(107,76,53,.08);font-weight:700}
+.course-row{display:flex;gap:8px;margin-top:6px}
+.course-btn{flex:1;border:1px solid var(--border);border-radius:3px;background:var(--warm);cursor:pointer;padding:12px 8px;text-align:center;transition:all .15s}
+.course-btn.on{border-color:var(--br-mid);background:rgba(107,76,53,.07)}
+.cb-icon{font-size:22px;margin-bottom:4px}
+.cb-name{font-family:'Noto Serif JP',serif;font-size:13px;font-weight:400;color:var(--br-mid);letter-spacing:1px}
+.cb-desc{font-family:'Noto Sans JP',sans-serif;font-size:10px;color:var(--text-dim);margin-top:2px}
 
 /* Notice */
 .notice{
@@ -251,6 +265,35 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     </div>
     <div class="ppl-more">
       <input type="number" id="ppl-input" placeholder="6名以上はこちらに入力" min="1" max="20" oninput="onPplInput(this)">
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="fc-title">ご利用スタイルをお選びください</div>
+    <div class="course-row">
+      <div class="course-btn on" onclick="selCourse('buffet',this)">
+        <div class="cb-icon">🍱</div>
+        <div class="cb-name">ブッフェ</div>
+        <div class="cb-desc">食べ放題 90分</div>
+      </div>
+      <div class="course-btn" onclick="selCourse('alacarte',this)">
+        <div class="cb-icon">🍽</div>
+        <div class="cb-name">アラカルト</div>
+        <div class="cb-desc">単品注文</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <div class="fc-title">車椅子・ベビーカーはご利用ですか？</div>
+    <div class="wc-row">
+      <div class="wc-lbl">台数</div>
+      <div class="wc-btns">
+        <div class="wc-btn on" onclick="selWc(0,this)">なし</div>
+        <div class="wc-btn" onclick="selWc(1,this)">1台</div>
+        <div class="wc-btn" onclick="selWc(2,this)">2台</div>
+        <div class="wc-btn" onclick="selWc(3,this)">3台以上</div>
+      </div>
     </div>
   </div>
 
@@ -418,7 +461,7 @@ const CONFIG = {
 };
 // ════════════════════════════════════════════════════
 
-let selectedPpl=1, selectedRound='12:30-40', hasTicket=false;
+let selectedPpl=1, selectedRound='', selectedWc=0, selectedCourse='buffet', hasTicket=false;
 let ticketData={}, callTimer=null, callRemain=0;
 let lineUserId='', myTicketId='', pollTimer=null;
 
@@ -451,6 +494,34 @@ function selRound(r,btn){
   btn.classList.add('on');
 }
 
+// ── WHEELCHAIR SELECTOR ───────────────────────────────
+function selWc(n,btn){
+  selectedWc=n;
+  document.querySelectorAll('.wc-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+// ── COURSE TYPE SELECTOR ──────────────────────────────
+function selCourse(c,btn){
+  selectedCourse=c;
+  document.querySelectorAll('.course-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+// ── TIME SANITIZER ────────────────────────────────────
+// Sheets の 1899 Date 文字列 → HH:mm に変換
+function fmtTime(t){
+  if(!t||t==='null'||t==='undefined') return '--';
+  const s=String(t).trim();
+  if(/^\d{1,2}:\d{2}([-–]\d{2})?$/.test(s)) return s;
+  try{ const d=new Date(s); if(!isNaN(d)) return d.toTimeString().slice(0,5); }catch(e){}
+  return s;
+}
+
+// ── 現在時刻から分を取得 ──────────────────────────────
+function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function parseRoundMin(r){ const m=String(r).match(/^(\d{1,2}):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
+
 // ── LIFF 初期化 ────────────────────────────────────────
 async function initLiff(){
   if(!CONFIG.LIFF_ID) return;
@@ -481,9 +552,15 @@ async function register(){
     return;
   }
 
+  if(!selectedRound){
+    alert('ご希望の回を選択してください。');
+    btn.disabled=false; btn.innerHTML='🪷　整理券を受け取る'; return;
+  }
+
   try{
     const params=new URLSearchParams({
-      action:'register', ppl:selectedPpl, round:selectedRound, lineUserId
+      action:'register', ppl:selectedPpl, round:selectedRound, lineUserId,
+      wheelchair:selectedWc, courseType:selectedCourse
     });
     const r=await fetch(CONFIG.GAS_URL+'?'+params);
     const d=await r.json();
@@ -502,13 +579,15 @@ async function register(){
 }
 
 function _showTicket(id,ppl,round,ahead,waitMin){
-  ticketData={num:id,ppl,round,ahead,waitMin};
+  const cleanRound=fmtTime(round);
+  ticketData={num:id,ppl,round:cleanRound,ahead,waitMin};
   hasTicket=true;
   document.getElementById('tc-num').textContent=id;
   document.getElementById('tc-ppl').textContent=`${ppl} 名様`;
-  document.getElementById('tc-round').textContent=`${round} の回`;
+  document.getElementById('tc-round').textContent=`${cleanRound} の回`;
   document.getElementById('tc-ahead').textContent=ahead===0?'なし（先頭）':`${ahead} 組`;
-  document.getElementById('tc-wait').textContent=ahead===0?'まもなくご案内':`約 ${waitMin} 分`;
+  // スマート待ち時間: GAS から来る waitMin は「回まで + 前の組*5分」計算済み
+  document.getElementById('tc-wait').textContent=waitMin<=5?'まもなくご案内':`約 ${waitMin} 分`;
 }
 
 // ── 呼び出しバナー表示 ─────────────────────────────────
@@ -546,7 +625,7 @@ function startPolling(id){
       }
       if(d.status==='waiting'||d.status==='pre'){
         document.getElementById('tc-ahead').textContent=d.ahead===0?'なし（先頭）':`${d.ahead} 組`;
-        document.getElementById('tc-wait').textContent=d.ahead===0?'まもなくご案内':`約 ${d.waitMin} 分`;
+        document.getElementById('tc-wait').textContent=d.waitMin<=5?'まもなくご案内':`約 ${d.waitMin} 分`;
       }
     }catch(e){}
   },30000);
@@ -586,8 +665,7 @@ function showCancelled(){
 
 // ── SEAT STATUS → Round List ────────────────────────────
 const _SA={full:'avail-ng',lim:'avail-lim',free:'avail-ok'};
-const _SL={full:'満席',lim:'残りわずか',free:'空きあり'};
-const _SW={full:'ご案内不可',lim:'目安 10〜20 分待ち',free:'目安 5〜10 分待ち'};
+const _SL={full:'満席',lim:'受付終了',free:'空きあり'};
 async function loadSeatStatus(){
   if(!CONFIG.GAS_URL) return;
   try{
@@ -596,33 +674,49 @@ async function loadSeatStatus(){
     if(!d||!d.seats||!d.seats.length) return;
     const el=document.getElementById('round-list');
     if(!el) return;
-    const seats=d.seats;
-    // auto-select first non-full if current selection not in list
-    const times=seats.map(s=>s.t||s.time||'');
-    if(!times.includes(selectedRound)){
-      const first=seats.find(s=>s.s!=='full');
-      selectedRound=first?(first.t||first.time||''):(times[0]||'');
+    const now=nowMinutes();
+    const GRACE=30; // 回開始から30分以内は表示継続
+    // 過去の回・満席・閉鎖を除外して表示可能なスロットに絞る
+    const seats=d.seats
+      .map(s=>({...s, t:fmtTime(s.t||s.time||'')}))
+      .filter(s=>{
+        const slotMin=parseRoundMin(s.t);
+        return slotMin+GRACE>=now; // 過去の回は非表示
+      });
+    if(!seats.length){
+      el.innerHTML=`<div style="font-family:'Noto Serif JP',serif;font-size:12px;color:var(--text-dim);letter-spacing:1px;padding:10px;text-align:center">本日の受付は終了しました</div>`;
+      return;
+    }
+    // selectedRound が有効でなければ最初の受付可能スロットを自動選択
+    const avail=seats.filter(s=>s.s!=='full');
+    if(!seats.find(s=>s.t===selectedRound)){
+      selectedRound=avail.length?avail[0].t:seats[0].t;
     }
     el.innerHTML=seats.map(s=>{
-      const t=s.t||s.time||'--';
-      const disabled=s.s==='full';
+      const disabled=(s.s==='full');
       const cls=_SA[s.s]||'avail-ok';
       const lbl=_SL[s.s]||'空きあり';
-      const wait=_SW[s.s]||'';
-      const sel=selectedRound===t?' on':'';
-      const clickAttr=disabled?'style="opacity:.5;cursor:not-allowed;pointer-events:none"':`onclick="selRound('${t}',this)"`;
-      return `<div class="round-btn${sel}" ${clickAttr}>
-        <div><div class="rb-time">${t} の回</div></div>
+      // スマート待ち時間ラベル
+      const untilMin=Math.max(0,parseRoundMin(s.t)-now);
+      let waitLbl='';
+      if(s.s==='full') waitLbl='ただいま満席';
+      else if(untilMin>0) waitLbl=`回まで約 ${untilMin} 分`;
+      else waitLbl='ご案内中';
+      const sel=selectedRound===s.t?' on':'';
+      const ng=disabled?' ng':'';
+      const clickAttr=disabled?'':`onclick="selRound('${s.t}',this)"`;
+      return `<div class="round-btn${sel}${ng}" ${clickAttr}>
+        <div><div class="rb-time">${s.t} の回</div></div>
         <div style="display:flex;align-items:center">
           <div class="rb-info">
-            <div class="rb-wait">${wait}</div>
+            <div class="rb-wait">${waitLbl}</div>
             <div class="rb-avail ${cls}">${lbl}</div>
           </div>
           <div class="rb-check">✓</div>
         </div>
       </div>`;
     }).join('');
-  }catch(e){}
+  }catch(e){ console.warn('loadSeatStatus error:',e); }
 }
 
 // LIFF 初期化 (DOM 読み込み後)
