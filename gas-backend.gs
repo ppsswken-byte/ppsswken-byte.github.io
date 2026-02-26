@@ -158,8 +158,9 @@ function registerQueue(params) {
   var courseType = params.courseType || 'buffet'; // 'buffet' or 'alacarte'
 
   var num  = nextCounter();
-  var id   = 'W-' + String(num).padStart(3, '0');
   var now  = new Date();
+  var mmdd = Utilities.formatDate(now, 'Asia/Tokyo', 'MMdd');
+  var id   = 'W-' + mmdd + '-' + String(num).padStart(3, '0');
   var time = Utilities.formatDate(now, 'Asia/Tokyo', 'HH:mm');
 
   var all   = getAllQueue();
@@ -276,8 +277,9 @@ function addQueueByStaff(params) {
   if (courseType === 'alacarte') note = ('アラカルト ' + note).trim();
 
   var num  = nextCounter();
-  var id   = 'W-' + String(num).padStart(3, '0');
   var now  = new Date();
+  var mmdd = Utilities.formatDate(now, 'Asia/Tokyo', 'MMdd');
+  var id   = 'W-' + mmdd + '-' + String(num).padStart(3, '0');
   var time = Utilities.formatDate(now, 'Asia/Tokyo', 'HH:mm');
 
   var all   = getAllQueue();
