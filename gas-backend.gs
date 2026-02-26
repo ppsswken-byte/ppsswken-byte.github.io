@@ -75,8 +75,8 @@ function getAllQueue() {
     return {
       id:         String(row[0]),
       ppl:        Number(row[1]),
-      time:       String(row[2]),
-      round:      String(row[3]),
+      time:       (row[2] instanceof Date) ? Utilities.formatDate(row[2], 'Asia/Tokyo', 'HH:mm') : String(row[2]),
+      round:      (row[3] instanceof Date) ? Utilities.formatDate(row[3], 'Asia/Tokyo', 'HH:mm') : String(row[3]),
       status:     String(row[4]),
       calledAt:   row[5] ? Number(row[5]) : null,
       lineUserId: String(row[6] || ''),
