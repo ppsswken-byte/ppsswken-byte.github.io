@@ -330,10 +330,8 @@ function setupSheets() {
 // ※ token を書き換えてから実行してください
 function setLineToken() {
   PropertiesService.getScriptProperties()
-    .setProperty('LINE_TOKEN', 'O+GJJF5MVJmwF4VsszDPBvd7QwOY5S8Z0CGufmDu8uFE9iq1TluMrURalDaLH2GhBY5JUEb1jALpPFzTYfE/pXaDOsD/s+eL/qXqBYL7kDr35GH6SqC0HTAyBhAHVw3/Yb61gMuhGcA9zaj9PBJpIgdB04t89/1O/w1cDnyilFU=');
-  Logger.log('✅ LINE Token set!');
+    .setProperty('LINE_TOKEN', 'YOUR_LINE_CHANNEL_ACCESS_TOKEN_HERE');
 }
-
 // カウンターをリセットする（営業日のリセット用）
 function resetCounter() {
   PropertiesService.getScriptProperties().setProperty('QUEUE_COUNTER', '0');
