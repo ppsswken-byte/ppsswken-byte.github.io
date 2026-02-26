@@ -96,6 +96,11 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 .q-time{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:400;color:var(--text)}
 .q-ppl{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:400;color:var(--text);text-align:center}
 .q-round{font-family:'Noto Sans JP',sans-serif;font-size:14px;font-weight:400;color:var(--br-mid)}
+.note-badges{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px}
+.nb{font-size:9px;padding:2px 6px;border-radius:2px;letter-spacing:0;font-family:'Noto Sans JP',sans-serif;font-weight:400;white-space:nowrap;line-height:1.4}
+.nb-alc{background:rgba(107,76,53,.08);color:var(--br-mid);border:1px solid rgba(107,76,53,.22)}
+.nb-wc{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(28,74,110,.18)}
+.nb-note{background:var(--warm);color:var(--text-mid);border:1px solid var(--border)}
 
 /* Status pills */
 .spill{display:inline-flex;align-items:center;gap:4px;padding:5px 14px;border-radius:2px;font-family:'Noto Sans JP',sans-serif;font-weight:400;font-size:13px;letter-spacing:1px}
@@ -407,6 +412,17 @@ function getFiltered(){
   return data;
 }
 
+function noteBadges(note){
+  if(!note) return '';
+  const badges=[];
+  if(note.includes('アラカルト')) badges.push('<span class="nb nb-alc">🍽 アラカルト</span>');
+  const wc=note.match(/車椅子[^\s]*/);
+  if(wc) badges.push(`<span class="nb nb-wc">♿ ${wc[0]}</span>`);
+  const rem=note.replace(/アラカルト\s?/,'').replace(/車椅子[^\s]*\s?/,'').trim();
+  if(rem) badges.push(`<span class="nb nb-note">${rem}</span>`);
+  return badges.length?`<div class="note-badges">${badges.join('')}</div>`:'';
+}
+
 function rowHTML(q){
   let cls='';
   if(q.status==='called') cls='called';
@@ -435,7 +451,7 @@ function rowHTML(q){
   }
 
   return `<div class="qrow ${cls}" data-id="${q.id}">
-    <div class="q-num">${q.id}</div>
+    <div class="q-num">${q.id}${noteBadges(q.note)}</div>
     <div class="q-time">${fmtTime(q.time)}</div>
     <div class="q-ppl">${q.ppl}名</div>
     <div class="q-round">${fmtTime(q.round)}</div>
