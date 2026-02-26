@@ -284,7 +284,7 @@ html,body{
   <!-- LEFT col: brand + clock -->
   <div class="qp-head">
     <div class="qp-head-left">
-      <div class="qp-title">🪷　THE SIAM HERITAGE</div>
+      <div class="qp-title" id="qp-title-el">THE SIAM HERITAGE</div>
       <div class="qp-sub"><div class="live-dot"></div>リアルタイム更新中</div>
     </div>
     <div>
@@ -462,6 +462,7 @@ function fmtTime(t){
   try{ const d=new Date(s); if(!isNaN(d)) return d.toTimeString().slice(0,5); }catch(e){}
   return s;
 }
+function parseRoundMin(r){ const m=String(r).match(/^(\d{1,2}):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
 
 // ライブデータ (refreshPanel で更新される)
 let liveQ = [...demoQ];
@@ -549,7 +550,20 @@ async function refreshPanel(){
   // Wait
   const wEl=document.getElementById('wait');
   if(!waiting.length){ wEl.textContent='ただいまご案内可能です'; wEl.style.color='var(--green)'; }
-  else { const n=waiting.length; wEl.textContent=`約 ${n*5}〜${n*5+5} 分`; wEl.style.color=n>4?'var(--red)':'var(--br-mid)'; }
+  else {
+    const nowMin=new Date().getHours()*60+new Date().getMinutes();
+    // 最短待ち: 次の受付可能な回の開始まで + その回の待ち人数*5分
+    const avail=seats.filter(s=>s.s!=='full');
+    let minWait=waiting.length*5;
+    if(avail.length){
+      const nextSlot=avail.find(s=>parseRoundMin(s.t)>=nowMin)||avail[avail.length-1];
+      const until=Math.max(0,parseRoundMin(nextSlot.t)-nowMin);
+      const inQ=waiting.filter(x=>x.round===nextSlot.t).length;
+      minWait=until+inQ*5;
+    }
+    wEl.textContent=`約 ${minWait}〜${minWait+10} 分`;
+    wEl.style.color=waiting.length>4?'var(--red)':'var(--br-mid)';
+  }
 
   // Queue list
   const sig=waiting.map(x=>x.id+x.status).join(',');
@@ -597,6 +611,19 @@ function patchFC(){
 }
 
 // ── INIT ────────────────────────────────────────────────
+// ロゴ画像を qp-title に注入
+(function(){
+  const logoImg=document.querySelector('.vz-logo-mark img');
+  const title=document.getElementById('qp-title-el');
+  if(logoImg&&title){
+    const img=document.createElement('img');
+    img.src=logoImg.src;
+    img.style.cssText='height:26px;width:26px;border-radius:50%;object-fit:cover;margin-right:7px;vertical-align:middle;flex-shrink:0';
+    title.style.display='flex';
+    title.style.alignItems='center';
+    title.insertBefore(img,title.firstChild);
+  }
+})();
 initVideo();
 initTicker();
 updateClock();

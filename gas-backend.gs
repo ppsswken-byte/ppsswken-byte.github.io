@@ -50,6 +50,7 @@ function doGet(e) {
       case 'restore':      result = restoreCustomer(e.parameter.id); break;
       case 'addQueue':     result = addQueueByStaff(e.parameter);    break;
       case 'updateSeats':  result = updateSeats(e.parameter);        break;
+      case 'resetCounter': result = resetCounterAPI();               break;
       default:             result = { error: 'Unknown action: ' + action };
     }
 
@@ -116,6 +117,21 @@ function getDashboard() {
   };
 }
 
+// ── HELPER: Date / 文字列 → HH:mm 文字列 ─────────────────
+function toTimeStr(val) {
+  if (val instanceof Date) return Utilities.formatDate(val, 'Asia/Tokyo', 'HH:mm');
+  var s = String(val).trim();
+  if (/^\d{1,2}:\d{2}/.test(s)) return s; // "HH:mm" or "HH:mm-mm" はそのまま
+  try { var d = new Date(s); if (!isNaN(d.getTime())) return Utilities.formatDate(d, 'Asia/Tokyo', 'HH:mm'); } catch(e) {}
+  return s;
+}
+
+// ── HELPER: ブッフェ回の開始分数 ──────────────────────────
+function parseRoundMinutes(round) {
+  var m = String(round).match(/^(\d{1,2}):(\d{2})/);
+  return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0;
+}
+
 // ── getSeats ─────────────────────────────────────────────
 function getSeats() {
   var sheet = getSheet('Seats');
@@ -129,15 +145,17 @@ function getSeats() {
     ];
   }
   return data.slice(1).map(function(row) {
-    return { t: String(row[0]), fill: Number(row[1]), s: String(row[2]) };
+    return { t: toTimeStr(row[0]), fill: Number(row[1]), s: String(row[2]) };
   });
 }
 
 // ── register ─────────────────────────────────────────────
 function registerQueue(params) {
   var ppl        = parseInt(params.ppl, 10) || 1;
-  var round      = params.round      || '12:30';
+  var round      = params.round      || '12:30-40';
   var lineUserId = params.lineUserId || '';
+  var wheelchair = parseInt(params.wheelchair, 10) || 0;
+  var courseType = params.courseType || 'buffet'; // 'buffet' or 'alacarte'
 
   var num  = nextCounter();
   var id   = 'W-' + String(num).padStart(3, '0');
@@ -148,9 +166,18 @@ function registerQueue(params) {
   var ahead = all.filter(function(q) {
     return q.round === round && (q.status === 'waiting' || q.status === 'pre');
   }).length;
-  var waitMin = ahead * 5;
 
-  getSheet('Queue').appendRow([id, ppl, time, round, 'waiting', '', lineUserId, '']);
+  // スマート待ち時間: 回の開始まで + 前の組 * 5分
+  var nowMin    = now.getHours() * 60 + now.getMinutes();
+  var roundMin  = parseRoundMinutes(round);
+  var untilRound = Math.max(0, roundMin - nowMin);
+  var waitMin   = untilRound + ahead * 5;
+
+  var note = '';
+  if (wheelchair > 0) note += '車椅子/ベビーカー×' + wheelchair + ' ';
+  if (courseType === 'alacarte') note += 'アラカルト';
+
+  getSheet('Queue').appendRow([id, ppl, time, round, 'waiting', '', lineUserId, note.trim()]);
 
   if (lineUserId) {
     sendLineMessage(
@@ -159,8 +186,9 @@ function registerQueue(params) {
       '整理番号：' + id + '\n' +
       'ご人数：' + ppl + '名様\n' +
       'ご案内予定：' + round + ' の回\n' +
+      (courseType === 'alacarte' ? 'ご利用：アラカルト\n' : '') +
       '前のお客様：' + (ahead === 0 ? 'なし（先頭）' : ahead + '組') + '\n' +
-      '目安待ち時間：' + (ahead === 0 ? 'まもなくご案内' : '約 ' + waitMin + ' 分') + '\n\n' +
+      '目安待ち時間：' + (waitMin <= 5 ? 'まもなくご案内' : '約 ' + waitMin + ' 分') + '\n\n' +
       'ご案内の際にLINEでお知らせします。\n店内・近隣にてお待ちください。'
     );
   }
@@ -180,13 +208,18 @@ function getTicket(id) {
            x.id < q.id;
   }).length;
 
+  var nowMin    = new Date().getHours() * 60 + new Date().getMinutes();
+  var roundMin  = parseRoundMinutes(q.round);
+  var untilRound = Math.max(0, roundMin - nowMin);
+  var waitMin   = untilRound + ahead * 5;
+
   return {
     id:       q.id,
     status:   q.status,
     ppl:      q.ppl,
     round:    q.round,
     ahead:    ahead,
-    waitMin:  ahead * 5,
+    waitMin:  waitMin,
     calledAt: q.calledAt,
   };
 }
@@ -234,9 +267,13 @@ function restoreCustomer(id) {
 
 // ── addQueueByStaff ──────────────────────────────────────
 function addQueueByStaff(params) {
-  var ppl   = parseInt(params.ppl, 10) || 2;
-  var round = params.round || '12:30';
-  var note  = params.note  || '';
+  var ppl        = parseInt(params.ppl, 10) || 2;
+  var round      = params.round      || '12:30-40';
+  var note       = params.note       || '';
+  var wheelchair = parseInt(params.wheelchair, 10) || 0;
+  var courseType = params.courseType || 'buffet';
+  if (wheelchair > 0) note = ('車椅子/ベビーカー×' + wheelchair + ' ' + note).trim();
+  if (courseType === 'alacarte') note = ('アラカルト ' + note).trim();
 
   var num  = nextCounter();
   var id   = 'W-' + String(num).padStart(3, '0');
@@ -255,16 +292,24 @@ function addQueueByStaff(params) {
 
 // ── updateSeats ──────────────────────────────────────────
 function updateSeats(params) {
-  var sheet = getSheet('Seats');
-  var data  = sheet.getDataRange().getValues();
+  var sheet    = getSheet('Seats');
+  var data     = sheet.getDataRange().getValues();
+  var target   = String(params.time).trim();
   for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(params.time)) {
+    var cellTime = toTimeStr(data[i][0]); // Date → HH:mm or passthrough
+    if (cellTime === target) {
       sheet.getRange(i + 1, 2).setValue(parseInt(params.fill, 10));
       sheet.getRange(i + 1, 3).setValue(params.status);
       return { ok: true };
     }
   }
-  return { error: 'Seat time not found' };
+  return { error: 'Seat time not found: ' + target + ' (checked ' + (data.length - 1) + ' rows)' };
+}
+
+// ── resetCounterAPI ──────────────────────────────────────
+function resetCounterAPI() {
+  PropertiesService.getScriptProperties().setProperty('QUEUE_COUNTER', '0');
+  return { ok: true, message: 'Counter reset to 0' };
 }
 
 // ── LINE Messaging API ───────────────────────────────────
@@ -336,4 +381,20 @@ function setLineToken() {
 function resetCounter() {
   PropertiesService.getScriptProperties().setProperty('QUEUE_COUNTER', '0');
   Logger.log('✅ Counter reset to 0');
+}
+
+// 【毎日自動リセット】トリガーを設定する（一度だけ実行してください）
+// 毎日 16:00 (JST) に resetCounter() を自動実行
+function setupDailyResetTrigger() {
+  // 既存のトリガーを削除（重複防止）
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'resetCounter') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('resetCounter')
+    .timeBased()
+    .atHour(16)   // 閉店後 16:00 JST にリセット
+    .everyDays(1)
+    .inTimezone('Asia/Tokyo')
+    .create();
+  Logger.log('✅ Daily reset trigger set at 16:00 JST');
 }
