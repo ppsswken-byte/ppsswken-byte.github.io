@@ -58,7 +58,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 
 /* Slots */
 .slot-list{display:flex;flex-direction:column;gap:5px}
-.slot-item{background:var(--warm);border:1px solid var(--border);border-radius:3px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between}
+.slot-item{background:var(--warm);border:1px solid var(--border);border-radius:3px;padding:9px 11px;display:flex;align-items:center;justify-content:space-between;transition:background .15s,border-color .15s}
+.slot-item:hover{background:var(--parchment);border-color:var(--br-pale)}
 .slot-item.cur{border-color:rgba(168,132,58,.3);background:var(--gold-dim)}
 .slot-time{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:500;color:var(--br-mid)}
 .slot-meta{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);margin-top:2px;letter-spacing:1px}
@@ -81,18 +82,19 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 
 /* ── TABLE ── */
 .qtable{background:var(--w);border:1px solid var(--border);border-radius:3px;overflow:hidden;box-shadow:var(--shadow)}
-.t-head{display:grid;grid-template-columns:90px 68px 88px 110px 1fr 220px;padding:11px 22px;background:var(--warm);border-bottom:1px solid var(--border);font-family:'Noto Serif JP',serif;font-weight:200;font-size:13px;letter-spacing:2px;color:var(--text-dim)}
-.qrow{display:grid;grid-template-columns:90px 68px 88px 110px 1fr 220px;padding:18px 22px;border-bottom:1px solid var(--border);align-items:center;transition:background .14s}
+.t-head{display:grid;grid-template-columns:90px 150px 130px 1fr 220px;padding:11px 22px;background:var(--warm);border-bottom:1px solid var(--border);font-family:'Noto Sans JP',sans-serif;font-weight:400;font-size:12px;letter-spacing:1px;color:var(--text-dim)}
+.qrow{display:grid;grid-template-columns:90px 150px 130px 1fr 220px;padding:14px 22px;border-bottom:1px solid var(--border);align-items:center;transition:background .14s}
 .qrow:hover{background:var(--warm)}
 .qrow:last-child{border-bottom:none}
 .qrow.called{background:rgba(168,132,58,.04);border-left:2px solid var(--gold)}
 .qrow.done{opacity:1;background:rgba(139,58,47,.04)}
 .qrow.new{animation:rslide .3s ease}
 @keyframes rslide{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:translateX(0)}}
-.q-num{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
-.q-ppl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:18px;text-align:center}
-.q-time{font-family:'Cormorant Garamond',serif;font-size:17px;color:var(--text-dim)}
-.q-round{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;color:var(--br-light)}
+.q-num{font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
+.q-info{display:flex;flex-direction:column;gap:2px}
+.q-time{font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:400;color:var(--text)}
+.q-ppl{font-family:'Noto Sans JP',sans-serif;font-size:12px;font-weight:400;color:var(--text-dim)}
+.q-round{font-family:'Noto Sans JP',sans-serif;font-size:15px;font-weight:400;color:var(--br-mid)}
 
 /* Status pills */
 .spill{display:inline-flex;align-items:center;gap:4px;padding:5px 14px;border-radius:2px;font-family:'Noto Serif JP',serif;font-weight:300;font-size:13px;letter-spacing:1px}
@@ -102,6 +104,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 .sp-in{background:var(--green-dim);color:var(--green);border:1px solid rgba(45,107,74,.22)}
 .sp-ns{background:var(--red-dim);color:var(--red);border:1px solid rgba(139,58,47,.18)}
 .qrow.done .q-num{text-decoration:line-through;color:var(--text-dim)}
+.qrow.done .q-time{color:var(--text-dim)}
 .qrow.done .q-ppl{color:var(--text-dim)}
 
 /* Countdown */
@@ -201,13 +204,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     </div>
 
     <div>
-      <div class="sec-lbl">お席の状況</div>
-      <div class="slot-list">
-        <div class="slot-item"><div><div class="slot-time">11:00</div><div class="slot-meta">満席</div></div><div class="s-badge sb-full">満　席</div></div>
-        <div class="slot-item"><div><div class="slot-time">11:30</div><div class="slot-meta">満席</div></div><div class="s-badge sb-full">満　席</div></div>
-        <div class="slot-item cur"><div><div class="slot-time">12:30 ▸</div><div class="slot-meta">残り 3 テーブル</div></div><div class="s-badge sb-lim">残りわずか</div></div>
-        <div class="slot-item"><div><div class="slot-time">13:00</div><div class="slot-meta">LO 14:30</div></div><div class="s-badge sb-free">ご案内可</div></div>
-      </div>
+      <div class="sec-lbl">お席の状況 <span style="font-size:9px;letter-spacing:0;color:var(--br-pale);font-family:'Noto Sans JP',sans-serif">タップで変更</span></div>
+      <div class="slot-list" id="slot-list"></div>
     </div>
 
     <button class="btn-add" onclick="openModal()">＋　ウォークイン　新規受付</button>
@@ -225,8 +223,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     </div>
     <div class="qtable">
       <div class="t-head">
-        <span>番号</span><span style="text-align:center">人数</span>
-        <span>受付</span><span>回</span><span>ステータス</span>
+        <span>番号</span>
+        <span>受付時刻・人数</span>
+        <span>回</span>
+        <span>ステータス</span>
         <span style="text-align:right">操作</span>
       </div>
       <div id="tbody"></div>
@@ -292,6 +292,37 @@ let data=[
 ];
 let nid=10, filter='all', rendered=[];
 
+// ── SEAT STATUS ──────────────────────────────────────────
+let seatData=[
+  {t:'11:00',s:'full'},
+  {t:'11:30',s:'full'},
+  {t:'12:30',s:'lim'},
+  {t:'13:00',s:'free'},
+];
+const S_CYCLE={full:'lim',lim:'free',free:'full'};
+const S_LBL={full:'満　席',lim:'残りわずか',free:'ご案内可'};
+const S_META={full:'満席',lim:'残りわずか',free:'ご案内可'};
+const S_CLS={full:'sb-full',lim:'sb-lim',free:'sb-free'};
+const S_FILL={full:100,lim:60,free:15};
+
+function renderSeats(){
+  const el=document.getElementById('slot-list');
+  if(!el) return;
+  el.innerHTML=seatData.map((s,i)=>`
+    <div class="slot-item" onclick="toggleSeat(${i})" style="cursor:pointer" title="タップで状態を切り替え">
+      <div><div class="slot-time">${s.t}</div><div class="slot-meta">${S_META[s.s]}</div></div>
+      <div class="s-badge ${S_CLS[s.s]}">${S_LBL[s.s]}</div>
+    </div>`).join('');
+}
+
+async function toggleSeat(idx){
+  seatData[idx].s=S_CYCLE[seatData[idx].s];
+  renderSeats();
+  const seat=seatData[idx];
+  await apiCall({action:'updateSeats',time:seat.t,fill:S_FILL[seat.s],status:seat.s});
+  toast(`${seat.t} の席状況を更新しました`,'success');
+}
+
 // ── API ヘルパー ────────────────────────────────────
 async function apiCall(params){
   if(!CONFIG.GAS_URL) return null;
@@ -312,7 +343,11 @@ async function loadQueue(){
   }));
   const maxNum=data.reduce((m,q)=>Math.max(m,parseInt(q.id.replace('W-',''))||0),0);
   nid=maxNum+1;
+  if(result.seats&&result.seats.length){
+    seatData=result.seats.map(s=>({t:s.t||s.time,s:s.s||s.status}));
+  }
   rebuild();
+  renderSeats();
 }
 
 const SLBL={
@@ -358,8 +393,7 @@ function rowHTML(q){
 
   return `<div class="qrow ${cls}" data-id="${q.id}">
     <div class="q-num">${q.id}</div>
-    <div class="q-ppl" style="text-align:center">${q.ppl}名</div>
-    <div class="q-time">${q.time}</div>
+    <div class="q-info"><div class="q-time">${q.time}</div><div class="q-ppl">${q.ppl} 名</div></div>
     <div class="q-round">${q.round}</div>
     <div id="st-${q.id}">${stCell}</div>
     <div class="q-acts">${acts}</div>
@@ -533,7 +567,7 @@ function updateClock(){
 }
 
 // Init
-rebuild(); updateClock();
+rebuild(); renderSeats(); updateClock();
 setInterval(()=>{updateClock();checkExpired();patch();},1000);
 // GAS 接続時: 初回ロードと 30 秒ごと自動同期
 if(CONFIG.GAS_URL){ loadQueue(); setInterval(loadQueue,30000); }
