@@ -257,10 +257,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
   <div class="form-card">
     <div class="fc-title">ご希望の回をお選びください</div>
     <div class="round-list" id="round-list">
-      <div class="round-btn on" onclick="selRound('12:30',this)">
-        <div>
-          <div class="rb-time">12:30 の回</div>
-        </div>
+      <div class="round-btn on" onclick="selRound('12:30-40',this)">
+        <div><div class="rb-time">12:30-40 の回</div></div>
         <div style="display:flex;align-items:center">
           <div class="rb-info">
             <div class="rb-wait">目安 10〜15 分待ち</div>
@@ -269,10 +267,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
           <div class="rb-check">✓</div>
         </div>
       </div>
-      <div class="round-btn" onclick="selRound('13:00',this)">
-        <div>
-          <div class="rb-time">13:00 の回</div>
-        </div>
+      <div class="round-btn" onclick="selRound('13:10',this)">
+        <div><div class="rb-time">13:10 の回</div></div>
         <div style="display:flex;align-items:center">
           <div class="rb-info">
             <div class="rb-wait">目安 5〜10 分待ち</div>
@@ -389,7 +385,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     <div class="is-title">🕐 営業時間・ブッフェ回</div>
     <div class="hours-list">
       <div class="hour-row">
-        <div><div class="hr-day">月〜金（平日）</div><div style="font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:1px">回：11:00 / 11:30 / 12:30 / 13:00</div></div>
+        <div><div class="hr-day">月〜金（平日）</div><div style="font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);margin-top:3px;letter-spacing:1px">回：11:00 / 11:30 / 12:30-40 / 13:10</div></div>
         <div class="hr-times"><span class="hr-time">11:00 – 15:00</span><div class="hr-lo">LO 14:30</div></div>
       </div>
       <div class="hour-row" style="border-color:rgba(168,132,58,.2);background:var(--gold-dim)">
@@ -422,7 +418,7 @@ const CONFIG = {
 };
 // ════════════════════════════════════════════════════
 
-let selectedPpl=1, selectedRound='12:30', hasTicket=false;
+let selectedPpl=1, selectedRound='12:30-40', hasTicket=false;
 let ticketData={}, callTimer=null, callRemain=0;
 let lineUserId='', myTicketId='', pollTimer=null;
 
@@ -588,8 +584,53 @@ function showCancelled(){
   clearInterval(callTimer);
 }
 
+// ── SEAT STATUS → Round List ────────────────────────────
+const _SA={full:'avail-ng',lim:'avail-lim',free:'avail-ok'};
+const _SL={full:'満席',lim:'残りわずか',free:'空きあり'};
+const _SW={full:'ご案内不可',lim:'目安 10〜20 分待ち',free:'目安 5〜10 分待ち'};
+async function loadSeatStatus(){
+  if(!CONFIG.GAS_URL) return;
+  try{
+    const r=await fetch(CONFIG.GAS_URL+'?action=getDashboard');
+    const d=await r.json();
+    if(!d||!d.seats||!d.seats.length) return;
+    const el=document.getElementById('round-list');
+    if(!el) return;
+    const seats=d.seats;
+    // auto-select first non-full if current selection not in list
+    const times=seats.map(s=>s.t||s.time||'');
+    if(!times.includes(selectedRound)){
+      const first=seats.find(s=>s.s!=='full');
+      selectedRound=first?(first.t||first.time||''):(times[0]||'');
+    }
+    el.innerHTML=seats.map(s=>{
+      const t=s.t||s.time||'--';
+      const disabled=s.s==='full';
+      const cls=_SA[s.s]||'avail-ok';
+      const lbl=_SL[s.s]||'空きあり';
+      const wait=_SW[s.s]||'';
+      const sel=selectedRound===t?' on':'';
+      const clickAttr=disabled?'style="opacity:.5;cursor:not-allowed;pointer-events:none"':`onclick="selRound('${t}',this)"`;
+      return `<div class="round-btn${sel}" ${clickAttr}>
+        <div><div class="rb-time">${t} の回</div></div>
+        <div style="display:flex;align-items:center">
+          <div class="rb-info">
+            <div class="rb-wait">${wait}</div>
+            <div class="rb-avail ${cls}">${lbl}</div>
+          </div>
+          <div class="rb-check">✓</div>
+        </div>
+      </div>`;
+    }).join('');
+  }catch(e){}
+}
+
 // LIFF 初期化 (DOM 読み込み後)
-window.addEventListener('DOMContentLoaded',()=>{ initLiff(); });
+window.addEventListener('DOMContentLoaded',()=>{
+  initLiff();
+  loadSeatStatus();
+  setInterval(loadSeatStatus,30000);
+});
 </script>
 </body>
 </html>

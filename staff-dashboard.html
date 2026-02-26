@@ -296,8 +296,8 @@ let nid=10, filter='all', rendered=[];
 let seatData=[
   {t:'11:00',s:'full'},
   {t:'11:30',s:'full'},
-  {t:'12:30',s:'lim'},
-  {t:'13:00',s:'free'},
+  {t:'12:30-40',s:'lim'},
+  {t:'13:10',s:'free'},
 ];
 const S_CYCLE={full:'lim',lim:'free',free:'full'};
 const S_LBL={full:'満　席',lim:'残りわずか',free:'ご案内可'};
@@ -344,7 +344,7 @@ async function loadQueue(){
   const maxNum=data.reduce((m,q)=>Math.max(m,parseInt(q.id.replace('W-',''))||0),0);
   nid=maxNum+1;
   if(result.seats&&result.seats.length){
-    seatData=result.seats.map(s=>({t:s.t||s.time,s:s.s||s.status}));
+    seatData=result.seats.map(s=>({t:fmtTime(s.t||s.time),s:s.s||s.status}));
   }
   rebuild();
   renderSeats();

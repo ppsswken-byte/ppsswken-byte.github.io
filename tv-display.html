@@ -450,11 +450,18 @@ const demoQ = [
   { id:'W-009', ppl:2, round:'13:00', status:'waiting', calledAt:null },
 ];
 const SEATS = [
-  { t:'11:00', fill:100, s:'full' },
-  { t:'11:30', fill:100, s:'full' },
-  { t:'12:30', fill:72,  s:'lim'  },
-  { t:'13:00', fill:22,  s:'free' },
+  { t:'11:00',    fill:100, s:'full' },
+  { t:'11:30',    fill:100, s:'full' },
+  { t:'12:30-40', fill:72,  s:'lim'  },
+  { t:'13:10',    fill:22,  s:'free' },
 ];
+function fmtTime(t){
+  if(!t||t==='null'||t==='undefined') return '--';
+  const s=String(t).trim();
+  if(/^\d{1,2}:\d{2}([-–]\d{2})?$/.test(s)) return s;
+  try{ const d=new Date(s); if(!isNaN(d)) return d.toTimeString().slice(0,5); }catch(e){}
+  return s;
+}
 
 // ライブデータ (refreshPanel で更新される)
 let liveQ = [...demoQ];
@@ -570,7 +577,7 @@ async function refreshPanel(){
     const sc=s.s==='full'?'sb-full':s.s==='lim'?'sb-lim':'sb-free';
     const st=s.s==='full'?'満　席':s.s==='lim'?'残りわずか':'ご案内可';
     return `<div class="s-slot${s.fill>0?' hi':''}">
-      <div class="s-time">${s.t}</div>
+      <div class="s-time">${fmtTime(s.t)}</div>
       <div class="s-bar-bg"><div class="s-bar ${bc}" style="width:${s.fill}%"></div></div>
       <div class="s-badge ${sc}">${st}</div>
     </div>`;

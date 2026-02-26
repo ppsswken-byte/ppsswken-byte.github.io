@@ -122,10 +122,10 @@ function getSeats() {
   var data  = sheet.getDataRange().getValues();
   if (data.length <= 1) {
     return [
-      { t: '11:00', fill: 100, s: 'full' },
-      { t: '11:30', fill: 100, s: 'full' },
-      { t: '12:30', fill: 72,  s: 'lim'  },
-      { t: '13:00', fill: 22,  s: 'free' },
+      { t: '11:00',    fill: 100, s: 'full' },
+      { t: '11:30',    fill: 100, s: 'full' },
+      { t: '12:30-40', fill: 72,  s: 'lim'  },
+      { t: '13:10',    fill: 22,  s: 'free' },
     ];
   }
   return data.slice(1).map(function(row) {
@@ -311,10 +311,10 @@ function setupSheets() {
   if (sSheet.getLastRow() === 0) {
     sSheet.appendRow(['time', 'fill', 'status']);
     sSheet.getRange('1:1').setFontWeight('bold');
-    sSheet.appendRow(['11:00', 100, 'full']);
-    sSheet.appendRow(['11:30', 100, 'full']);
-    sSheet.appendRow(['12:30',  72, 'lim' ]);
-    sSheet.appendRow(['13:00',  22, 'free']);
+    sSheet.appendRow(['11:00',    100, 'full']);
+    sSheet.appendRow(['11:30',    100, 'full']);
+    sSheet.appendRow(['12:30-40',  72, 'lim' ]);
+    sSheet.appendRow(['13:10',     22, 'free']);
   }
 
   // カウンター初期化
