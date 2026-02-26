@@ -665,7 +665,7 @@ function showCancelled(){
 
 // ── SEAT STATUS → Round List ────────────────────────────
 const _SA={full:'avail-ng',lim:'avail-lim',free:'avail-ok'};
-const _SL={full:'満席',lim:'受付終了',free:'空きあり'};
+const _SL={full:'満席',lim:'残りわずか',free:'空きあり'};
 async function loadSeatStatus(){
   if(!CONFIG.GAS_URL) return;
   try{
