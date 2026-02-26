@@ -315,6 +315,7 @@ let seatData=[
   {t:'12:30-40',s:'lim'},
   {t:'13:10',s:'free'},
 ];
+let seatLockUntil=0; // ← toggle 直後に poll が上書きするのを防ぐタイムスタンプ
 const S_CYCLE={full:'lim',lim:'free',free:'full'};
 const S_LBL={full:'満　席',lim:'残りわずか',free:'ご案内可'};
 const S_META={full:'満席',lim:'残りわずか',free:'ご案内可'};
@@ -332,10 +333,20 @@ function renderSeats(){
 }
 
 async function toggleSeat(idx){
-  seatData[idx].s=S_CYCLE[seatData[idx].s];
+  const prevState=seatData[idx].s;          // 失敗時のロールバック用
+  seatData[idx].s=S_CYCLE[prevState];
   renderSeats();
+  seatLockUntil=Date.now()+15000;            // 15秒間 poll の上書きをブロック
   const seat=seatData[idx];
-  await apiCall({action:'updateSeats',time:seat.t,fill:S_FILL[seat.s],status:seat.s});
+  const res=await apiCall({action:'updateSeats',time:seat.t,fill:S_FILL[seat.s],status:seat.s});
+  if(!res||res.error){
+    // API 失敗 → ロールバック
+    seatData[idx].s=prevState;
+    renderSeats();
+    seatLockUntil=0;
+    toast(`保存できませんでした: ${res?.error||'通信エラー'}`,'error');
+    return;
+  }
   toast(`${seat.t} の席状況を更新しました`,'success');
 }
 
@@ -359,7 +370,7 @@ async function loadQueue(){
   }));
   const maxNum=data.reduce((m,q)=>Math.max(m,parseInt(q.id.replace('W-',''))||0),0);
   nid=maxNum+1;
-  if(result.seats&&result.seats.length){
+  if(result.seats&&result.seats.length&&Date.now()>seatLockUntil){
     seatData=result.seats.map(s=>({t:fmtTime(s.t||s.time),s:s.s||s.status}));
   }
   rebuild();
