@@ -166,6 +166,25 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 .cb-timer{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:300;color:rgba(250,250,248,.9);letter-spacing:4px}
 .cb-sub{font-family:'Noto Serif JP',serif;font-weight:200;font-size:11px;color:rgba(250,250,248,.6);letter-spacing:2px;margin-top:6px}
 
+/* Cancel button */
+.btn-cancel-queue{
+  width:100%;padding:12px;background:transparent;color:var(--red);
+  border:1px solid rgba(139,58,47,.3);border-radius:4px;
+  font-family:'Noto Serif JP',serif;font-weight:300;font-size:12px;
+  letter-spacing:3px;cursor:pointer;transition:all .2s;margin-top:4px;
+}
+.btn-cancel-queue:hover{background:var(--red-dim)}
+
+/* Cancelled banner */
+.cancel-banner{
+  background:var(--red);border-radius:4px;padding:20px;
+  text-align:center;margin-bottom:14px;display:none;
+}
+.cancel-banner.on{display:block}
+.cnb-emoji{font-size:36px;margin-bottom:8px}
+.cnb-title{font-family:'Noto Serif JP',serif;font-weight:400;font-size:15px;color:var(--ivory);letter-spacing:3px;margin-bottom:6px}
+.cnb-sub{font-family:'Noto Serif JP',serif;font-weight:200;font-size:11px;color:rgba(250,250,248,.7);letter-spacing:2px;margin-top:6px;line-height:1.9}
+
 /* ── INFO SCREEN ── */
 .info-section{background:var(--w);border:1px solid var(--border);border-radius:4px;padding:20px;box-shadow:var(--shadow);margin-bottom:12px}
 .is-title{font-family:'Noto Serif JP',serif;font-weight:500;font-size:12px;color:var(--br-mid);letter-spacing:3px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
@@ -324,6 +343,16 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     </div>
   </div>
 
+  <div class="cancel-banner" id="cancel-banner">
+    <div class="cnb-emoji">🚫</div>
+    <div class="cnb-title">整理券がキャンセルされました</div>
+    <div class="cnb-sub">ご利用ありがとうございました。<br>またのご来店をお待ちしております。</div>
+  </div>
+
+  <button class="btn-cancel-queue" id="btn-cancel-queue" onclick="confirmCancel()">
+    整理券をキャンセルする
+  </button>
+
 </div>
 
 <!-- ═══ INFO ═══ -->
@@ -347,16 +376,10 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
         <div class="pi-price yen">1,650</div>
         <div class="pi-note">per person</div>
       </div>
-      <div class="price-item">
-        <div class="pi-type">4歳未満</div>
-        <div class="pi-price">無料</div>
-        <div class="pi-note">Free</div>
-      </div>
     </div>
     <div style="margin-top:10px;padding:10px 12px;background:var(--warm);border-radius:3px;border:1px solid var(--border)">
       <div style="font-family:'Noto Serif JP',serif;font-weight:200;font-size:11px;color:var(--text-dim);letter-spacing:1px;line-height:1.9">
         ✓ 食べ放題 90 分<br>
-        ✓ タイティー・ソフトドリンク飲み放題含む<br>
         ✓ デザート・スイーツ込み
       </div>
     </div>
@@ -519,6 +542,9 @@ function startPolling(id){
       const r=await fetch(CONFIG.GAS_URL+'?action=getTicket&id='+id);
       const d=await r.json();
       if(d.error) return;
+      if(d.status==='noshow'||d.status==='cancelled'){
+        stopPolling(); showCancelled(); return;
+      }
       if(d.status==='called'&&!document.getElementById('called-banner').classList.contains('on')){
         simulateCall();
       }
@@ -530,6 +556,37 @@ function startPolling(id){
   },30000);
 }
 function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }
+
+// ── 整理券キャンセル ─────────────────────────────────
+function confirmCancel(){
+  if(!hasTicket||!myTicketId){ return; }
+  if(!confirm('整理券をキャンセルしてもよろしいですか？\nキャンセル後は元に戻せません。')) return;
+  cancelQueue();
+}
+async function cancelQueue(){
+  const id=myTicketId;
+  if(!id) return;
+  const btn=document.getElementById('btn-cancel-queue');
+  if(btn){ btn.disabled=true; btn.textContent='処理中...'; }
+  stopPolling();
+  if(CONFIG.GAS_URL){
+    try{
+      await fetch(CONFIG.GAS_URL+'?'+new URLSearchParams({action:'cancel',id}));
+    }catch(e){}
+  }
+  showCancelled();
+}
+function showCancelled(){
+  hasTicket=false; myTicketId='';
+  document.getElementById('cancel-banner').classList.add('on');
+  const btn=document.getElementById('btn-cancel-queue');
+  if(btn) btn.style.display='none';
+  const card=document.getElementById('ticket-card');
+  if(card) card.style.opacity='0.35';
+  const banner=document.getElementById('called-banner');
+  if(banner) banner.classList.remove('on');
+  clearInterval(callTimer);
+}
 
 // LIFF 初期化 (DOM 読み込み後)
 window.addEventListener('DOMContentLoaded',()=>{ initLiff(); });

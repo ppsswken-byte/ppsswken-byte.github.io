@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=1920, initial-scale=1.0">
+<meta name="viewport" content="width=1080, initial-scale=1.0">
 <title>The Siam Heritage Tokyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@200;300;400;500;600&family=Noto+Sans+JP:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&display=swap" rel="stylesheet">
 <style>
@@ -29,14 +29,14 @@
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{
-  width:1920px;height:1080px;overflow:hidden;
+  width:1080px;height:1920px;overflow:hidden;
   background:var(--ivory);
   font-family:'Noto Sans JP',sans-serif;
   color:var(--text);cursor:none;
 }
 
 /* ── ROOT GRID ── */
-.root{display:grid;grid-template-columns:1fr 1px 500px;width:1920px;height:1080px}
+.root{display:grid;grid-template-rows:384px 2px 1fr;width:1080px;height:1920px}
 
 /* ══════════════════════════════════════════
    LEFT  — VIDEO ZONE
@@ -158,21 +158,22 @@ html,body{
 ══════════════════════════════════════════ */
 .qpanel{
   background:var(--w);
-  display:flex;flex-direction:column;
+  display:grid;
+  grid-template-columns:280px 1px 1fr 1px 280px;
   position:relative;overflow:hidden;
-  border-left:none;
+  border-bottom:none;
 }
-/* Top accent stripe */
-.qpanel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--br-mid),var(--gold),var(--br-pale),var(--gold),var(--br-mid))}
+/* Bottom accent stripe (becomes top of video zone) */
+.qpanel::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(to right,var(--br-mid),var(--gold),var(--br-pale),var(--gold),var(--br-mid));z-index:2}
 
 /* ── Panel header ── */
 .qp-head{
-  padding:28px 28px 18px;
-  border-bottom:1px solid var(--border);
-  flex-shrink:0;display:flex;align-items:flex-start;justify-content:space-between;
+  padding:22px 24px;
+  display:flex;flex-direction:column;justify-content:space-between;
+  border-right:none;
 }
 .qp-head-left .qp-title{
-  font-family:'Noto Serif JP',serif;font-weight:500;font-size:14px;
+  font-family:'Noto Serif JP',serif;font-weight:500;font-size:13px;
   color:var(--br-mid);letter-spacing:4px;
 }
 .qp-head-left .qp-sub{
@@ -183,29 +184,29 @@ html,body{
 .live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:lpulse 2.2s infinite}
 @keyframes lpulse{0%,100%{opacity:1}50%{opacity:.35}}
 .qp-clock{
-  font-family:'Cormorant Garamond',serif;font-weight:300;font-size:42px;
-  color:var(--br-mid);letter-spacing:1px;line-height:1;text-align:right;
+  font-family:'Cormorant Garamond',serif;font-weight:300;font-size:52px;
+  color:var(--br-mid);letter-spacing:1px;line-height:1;
 }
 .qp-date{
   font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;
-  color:var(--text-dim);letter-spacing:2px;margin-top:4px;text-align:right;
+  color:var(--text-dim);letter-spacing:2px;margin-top:4px;
 }
 
 /* ── Final Call ── */
-.fc-wrap{flex-shrink:0;padding:0 20px 14px}
+.fc-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:16px 20px;gap:10px;overflow:hidden}
 .fc-banner{
   display:none;flex-direction:column;gap:6px;
   background:#FBF5F4;border:1px solid rgba(139,58,47,.18);
   border-left:3px solid var(--red);border-radius:3px;
-  padding:14px 18px;animation:fc-pulse 2.5s ease infinite;
+  padding:12px 16px;animation:fc-pulse 2.5s ease infinite;flex-shrink:0;
 }
 .fc-banner.on{display:flex}
 @keyframes fc-pulse{0%,100%{border-left-color:var(--red)}50%{border-left-color:rgba(139,58,47,.3)}}
-.fc-lbl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:10px;color:var(--red);letter-spacing:3px}
+.fc-lbl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:11px;color:var(--red);letter-spacing:3px}
 .fc-nums{display:flex;flex-wrap:wrap;gap:7px;margin-top:3px}
 .fc-badge{
   background:var(--red);color:#fff;
-  font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;
+  font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:500;
   padding:3px 16px;border-radius:2px;letter-spacing:2px;
   animation:badge-pop .4s cubic-bezier(.34,1.56,.64,1);
 }
@@ -214,71 +215,124 @@ html,body{
 
 /* ── Wait summary ── */
 .wait-row{
-  flex-shrink:0;margin:0 20px 14px;
+  flex-shrink:0;
   background:var(--warm);border:1px solid var(--border);border-radius:3px;
-  padding:12px 16px;display:flex;align-items:center;gap:12px;
+  padding:10px 14px;display:flex;align-items:center;gap:10px;
 }
-.wait-icon{font-size:22px;opacity:.6}
+.wait-icon{font-size:18px;opacity:.6}
 .wait-lbl{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:2px}
-.wait-val{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:400;color:var(--br-mid);letter-spacing:1px;margin-top:2px}
+.wait-val{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--br-mid);letter-spacing:1px;margin-top:1px}
 
 /* ── Queue list ── */
-.q-section{flex:1;padding:0 20px;overflow:hidden;display:flex;flex-direction:column;gap:7px;min-height:0}
+.q-section{display:flex;flex-direction:column;gap:5px;overflow:hidden}
 .q-sec-lbl{
   font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;
   color:var(--text-dim);letter-spacing:3px;
-  padding:2px 0 8px;border-bottom:1px solid var(--border);flex-shrink:0;
+  padding:2px 0 7px;border-bottom:1px solid var(--border);flex-shrink:0;
 }
-.q-list{flex:1;display:flex;flex-direction:column;gap:5px;overflow:hidden}
+.q-list{flex:1;display:flex;flex-direction:column;gap:4px;overflow:hidden}
 .q-item{
-  display:grid;grid-template-columns:72px 1fr auto;align-items:center;gap:10px;
+  display:grid;grid-template-columns:68px 1fr auto;align-items:center;gap:8px;
   background:var(--ivory);border:1px solid var(--border);border-radius:3px;
-  padding:11px 13px;flex-shrink:0;
+  padding:8px 11px;flex-shrink:0;
   animation:qi-in .35s ease;
 }
 @keyframes qi-in{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
-.qi-num{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
-.qi-ppl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:13px;color:var(--text)}
-.qi-rnd{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:2px}
+.qi-num{font-family:'Cormorant Garamond',serif;font-size:17px;font-weight:500;color:var(--br-mid);letter-spacing:1px}
+.qi-ppl{font-family:'Noto Serif JP',serif;font-weight:400;font-size:12px;color:var(--text)}
+.qi-rnd{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-top:1px}
 .qi-status{
   font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;
-  padding:3px 10px;border-radius:2px;letter-spacing:1px;white-space:nowrap;
+  padding:3px 9px;border-radius:2px;letter-spacing:1px;white-space:nowrap;
 }
 .qs-w{background:rgba(107,76,53,.07);color:var(--br-mid);border:1px solid rgba(107,76,53,.14)}
 .qs-p{background:rgba(168,132,58,.1);color:var(--gold);border:1px solid rgba(168,132,58,.22)}
 .qs-c{background:rgba(139,58,47,.07);color:var(--red);border:1px solid rgba(139,58,47,.18)}
-.q-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-.q-empty-icon{font-size:36px;opacity:.18}
-.q-empty-txt{font-family:'Noto Serif JP',serif;font-weight:200;font-size:12px;color:var(--text-dim);letter-spacing:2px}
+.q-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.q-empty-icon{font-size:28px;opacity:.18}
+.q-empty-txt{font-family:'Noto Serif JP',serif;font-weight:200;font-size:11px;color:var(--text-dim);letter-spacing:2px}
 
 /* ── Seat status ── */
-.seat-section{flex-shrink:0;padding:12px 20px 18px;border-top:1px solid var(--border)}
-.seat-lbl{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:3px;margin-bottom:9px}
-.seat-slots{display:flex;flex-direction:column;gap:6px}
-.s-slot{display:flex;align-items:center;gap:9px;background:var(--warm);border-radius:3px;padding:8px 11px;border:1px solid transparent}
+.seat-section{padding:20px 22px;display:flex;flex-direction:column;justify-content:center;gap:12px}
+.seat-lbl{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:3px;margin-bottom:4px}
+.seat-slots{display:flex;flex-direction:column;gap:5px}
+.s-slot{display:flex;align-items:center;gap:8px;background:var(--warm);border-radius:3px;padding:7px 10px;border:1px solid transparent}
 .s-slot.hi{border-color:var(--border)}
-.s-time{font-family:'Cormorant Garamond',serif;font-size:15px;font-weight:500;color:var(--br-mid);width:46px;flex-shrink:0}
+.s-time{font-family:'Cormorant Garamond',serif;font-size:14px;font-weight:500;color:var(--br-mid);width:42px;flex-shrink:0}
 .s-bar-bg{flex:1;height:3px;background:var(--parchment);border-radius:2px;overflow:hidden}
 .s-bar{height:100%;border-radius:2px;transition:width 1.2s cubic-bezier(.34,1.56,.64,1)}
 .bar-full{background:var(--red)}.bar-lim{background:var(--gold)}.bar-free{background:var(--green)}
-.s-badge{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;padding:3px 9px;border-radius:2px;flex-shrink:0;letter-spacing:1px}
+.s-badge{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;padding:2px 8px;border-radius:2px;flex-shrink:0;letter-spacing:1px}
 .sb-full{background:rgba(139,58,47,.07);color:var(--red);border:1px solid rgba(139,58,47,.18)}
 .sb-lim{background:rgba(168,132,58,.09);color:var(--gold);border:1px solid rgba(168,132,58,.22)}
 .sb-free{background:rgba(45,107,74,.08);color:var(--green);border:1px solid rgba(45,107,74,.18)}
 
 /* ── Footer ── */
-.qp-foot{
-  flex-shrink:0;padding:10px 20px 14px;border-top:1px solid var(--border2);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.foot-addr{font-family:'Noto Serif JP',serif;font-weight:200;font-size:10px;color:var(--text-dim);letter-spacing:2px;line-height:1.9}
-.foot-brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:14px;color:var(--br-pale);letter-spacing:2px}
+.qp-foot{display:none}
+.foot-addr{display:none}
+.foot-brand{display:none}
+/* Vertical dividers inside qpanel */
+.qp-vdiv{background:var(--border);width:1px}
 </style>
 </head>
 <body>
 <div class="root">
 
-<!-- ═══════════════════ LEFT — VIDEO ═══════════════════ -->
+<!-- ═══════════════════ TOP — QUEUE STRIP ═══════════════════ -->
+<div class="qpanel">
+
+  <!-- LEFT col: brand + clock -->
+  <div class="qp-head">
+    <div class="qp-head-left">
+      <div class="qp-title">🪷　THE SIAM HERITAGE</div>
+      <div class="qp-sub"><div class="live-dot"></div>リアルタイム更新中</div>
+    </div>
+    <div>
+      <div class="qp-clock" id="clock">12:00</div>
+      <div class="qp-date" id="date"></div>
+    </div>
+  </div>
+
+  <!-- Vertical divider -->
+  <div class="qp-vdiv"></div>
+
+  <!-- CENTER col: final call + wait + queue list -->
+  <div class="fc-wrap">
+    <div class="fc-banner" id="fc">
+      <div class="fc-lbl">ご入店のご案内　—　お呼び出し中</div>
+      <div class="fc-nums" id="fc-nums"></div>
+      <div class="fc-timer" id="fc-timer"></div>
+    </div>
+
+    <div class="wait-row">
+      <div class="wait-icon">⏳</div>
+      <div>
+        <div class="wait-lbl">現在のお待ち時間（目安）</div>
+        <div class="wait-val" id="wait">約 10〜15 分</div>
+      </div>
+    </div>
+
+    <div class="q-section">
+      <div class="q-sec-lbl">お待ちのお客様</div>
+      <div class="q-list" id="qlist"></div>
+    </div>
+  </div>
+
+  <!-- Vertical divider -->
+  <div class="qp-vdiv"></div>
+
+  <!-- RIGHT col: seat status -->
+  <div class="seat-section">
+    <div class="seat-lbl">お席の状況</div>
+    <div class="seat-slots" id="seats"></div>
+  </div>
+
+</div><!-- /qpanel -->
+
+<!-- ═══════════════════ DIVIDER ═══════════════════ -->
+<div class="divider"></div>
+
+<!-- ═══════════════════ BOTTOM — VIDEO ZONE ═══════════════════ -->
 <div class="video-zone">
 
   <!--
@@ -331,13 +385,8 @@ html,body{
       </div>
       <div class="pill">
         <div class="pill-seg">
-          <div class="pill-lbl">お子様（4歳〜12歳未満）</div>
+          <div class="pill-lbl">お子様（4〜12歳未満）</div>
           <div class="pill-val yen">1,650</div>
-        </div>
-        <div class="pill-sep"></div>
-        <div class="pill-seg">
-          <div class="pill-lbl">4歳未満</div>
-          <div class="pill-val">無　料</div>
         </div>
       </div>
       <div class="pill">
@@ -354,55 +403,6 @@ html,body{
 
 </div><!-- /video-zone -->
 
-<!-- ═══════════════════ DIVIDER ═══════════════════ -->
-<div class="divider"></div>
-
-<!-- ═══════════════════ RIGHT — QUEUE ═══════════════════ -->
-<div class="qpanel">
-
-  <div class="qp-head">
-    <div class="qp-head-left">
-      <div class="qp-title">ウォークイン　受付状況</div>
-      <div class="qp-sub"><div class="live-dot"></div>リアルタイム更新中</div>
-    </div>
-    <div>
-      <div class="qp-clock" id="clock">12:00</div>
-      <div class="qp-date" id="date"></div>
-    </div>
-  </div>
-
-  <div class="fc-wrap">
-    <div class="fc-banner" id="fc">
-      <div class="fc-lbl">ご入店のご案内　—　お呼び出し中</div>
-      <div class="fc-nums" id="fc-nums"></div>
-      <div class="fc-timer" id="fc-timer"></div>
-    </div>
-  </div>
-
-  <div class="wait-row">
-    <div class="wait-icon">⏳</div>
-    <div>
-      <div class="wait-lbl">現在のお待ち時間（目安）</div>
-      <div class="wait-val" id="wait">約 10〜15 分</div>
-    </div>
-  </div>
-
-  <div class="q-section">
-    <div class="q-sec-lbl">お待ちのお客様</div>
-    <div class="q-list" id="qlist"></div>
-  </div>
-
-  <div class="seat-section">
-    <div class="seat-lbl">お席の状況</div>
-    <div class="seat-slots" id="seats"></div>
-  </div>
-
-  <div class="qp-foot">
-    <div class="foot-addr">新丸の内ビルディング 6F<br>丸の内1-5-1　千代田区　東京</div>
-    <div class="foot-brand">The Siam Heritage</div>
-  </div>
-
-</div><!-- /qpanel -->
 </div><!-- /root -->
 
 <script>
@@ -419,7 +419,6 @@ const PROMOS = [
   { e:'🍜', t:'トム・ヤム・クン', b:'本場タイの酸辣スープ\n芳醇なハーブと海老の旨み', tag:'' },
   { e:'🥭', t:'マンゴースイーツ', b:'毎朝仕入れる完熟マンゴー\nもち米と椰子ミルクで', tag:'' },
   { e:'🦐', t:'新鮮シーフード', b:'エビ・蟹・イカを\n毎日仕入れてご提供', tag:'' },
-  { e:'🍵', t:'タイティー 飲み放題', b:'ブッフェ料金に含まれます\nおかわり自由', tag:'INCLUDED' },
   { e:'👨‍🍳', t:'タイ人シェフ監修', b:'現地で修行した本格派\n正真正銘の本場の味', tag:'' },
 ];
 
@@ -427,7 +426,6 @@ const PROMOS = [
 const TICKERS = [
   'ランチブッフェ　食べ放題 90 分',
   '平日 ¥3,520　／　土日祝プレミアム ¥3,960',
-  'お子様（4〜12歳未満）¥1,650　·　4歳未満　無料',
   'ウォークイン受付中　—　QRコードでかんたん整理券',
   '新丸の内ビルディング 6F　·　丸ノ内線・JR 東京駅直結',
   'ご予約はウェブサイトまたはお電話にて',
