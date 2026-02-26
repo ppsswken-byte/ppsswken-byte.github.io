@@ -675,18 +675,9 @@ async function loadSeatStatus(){
     const el=document.getElementById('round-list');
     if(!el) return;
     const now=nowMinutes();
-    const GRACE=30; // 回開始から30分以内は表示継続
-    // 過去の回・満席・閉鎖を除外して表示可能なスロットに絞る
-    const seats=d.seats
-      .map(s=>({...s, t:fmtTime(s.t||s.time||'')}))
-      .filter(s=>{
-        const slotMin=parseRoundMin(s.t);
-        return slotMin+GRACE>=now; // 過去の回は非表示
-      });
-    if(!seats.length){
-      el.innerHTML=`<div style="font-family:'Noto Serif JP',serif;font-size:12px;color:var(--text-dim);letter-spacing:1px;padding:10px;text-align:center">本日の受付は終了しました</div>`;
-      return;
-    }
+    // すべての回を表示（スタッフのお席の状況設定に従う）
+    const seats=d.seats.map(s=>({...s, t:fmtTime(s.t||s.time||'')}));
+    if(!seats.length) return;
     // selectedRound が有効でなければ最初の受付可能スロットを自動選択
     const avail=seats.filter(s=>s.s!=='full');
     if(!seats.find(s=>s.t===selectedRound)){
