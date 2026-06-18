@@ -461,7 +461,7 @@ const CONFIG = {
 };
 // ════════════════════════════════════════════════════
 
-let selectedPpl=1, selectedRound='', selectedWc=0, selectedCourse='buffet', hasTicket=false;
+let selectedPpl=1, selectedRound='12:30-40', selectedWc=0, selectedCourse='buffet', hasTicket=false;
 let ticketData={}, callTimer=null, callRemain=0;
 let lineUserId='', myTicketId='', pollTimer=null;
 
@@ -517,6 +517,9 @@ function fmtTime(t){
   try{ const d=new Date(s); if(!isNaN(d)) return d.toTimeString().slice(0,5); }catch(e){}
   return s;
 }
+
+// ── 表示用の短い整理番号 (W-MMDD-NNN → W-NNN) ──────────
+function shortId(id){ const m=String(id).match(/(\d+)$/); return m?'W-'+m[1]:id; }
 
 // ── 現在時刻から分を取得 ──────────────────────────────
 function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
@@ -582,7 +585,7 @@ function _showTicket(id,ppl,round,ahead,waitMin){
   const cleanRound=fmtTime(round);
   ticketData={num:id,ppl,round:cleanRound,ahead,waitMin};
   hasTicket=true;
-  document.getElementById('tc-num').textContent=id;
+  document.getElementById('tc-num').textContent=shortId(id);
   document.getElementById('tc-ppl').textContent=`${ppl} 名様`;
   document.getElementById('tc-round').textContent=`${cleanRound} の回`;
   document.getElementById('tc-ahead').textContent=ahead===0?'なし（先頭）':`${ahead} 組`;

@@ -132,6 +132,12 @@ function parseRoundMinutes(round) {
   return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0;
 }
 
+// ── HELPER: 表示用の短い整理番号 (W-MMDD-NNN → W-NNN) ──────
+function shortId(id) {
+  var m = String(id).match(/(\d+)$/);
+  return m ? 'W-' + m[1] : id;
+}
+
 // ── getSeats ─────────────────────────────────────────────
 function getSeats() {
   var sheet = getSheet('Seats');
@@ -184,7 +190,7 @@ function registerQueue(params) {
     sendLineMessage(
       lineUserId,
       '🪷 整理券を受け取りました\n\n' +
-      '整理番号：' + id + '\n' +
+      '整理番号：' + shortId(id) + '\n' +
       'ご人数：' + ppl + '名様\n' +
       'ご案内予定：' + round + ' の回\n' +
       (courseType === 'alacarte' ? 'ご利用：アラカルト\n' : '') +
@@ -238,7 +244,7 @@ function callCustomer(id) {
     sendLineMessage(
       q.lineUserId,
       '🔔 ご入店のご案内\n\n' +
-      '整理番号 ' + id + ' のお客様\n' +
+      '整理番号 ' + shortId(id) + ' のお客様\n' +
       'ただいまご案内できます。\n\n' +
       '📍 10分以内にカウンターへお越しください\n' +
       '新丸の内ビルディング 6F\nThe Siam Heritage Tokyo'

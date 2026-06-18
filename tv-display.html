@@ -443,11 +443,11 @@ const CONFIG = {
 
 // ── DEMO DATA ────────────────────────────────────────────
 const demoQ = [
-  { id:'W-005', ppl:4, round:'12:30', status:'called',  calledAt:Date.now()-5*60000 },
-  { id:'W-006', ppl:2, round:'12:30', status:'pre',     calledAt:null },
-  { id:'W-007', ppl:3, round:'12:30', status:'waiting', calledAt:null },
-  { id:'W-008', ppl:5, round:'13:00', status:'waiting', calledAt:null },
-  { id:'W-009', ppl:2, round:'13:00', status:'waiting', calledAt:null },
+  { id:'W-005', ppl:4, round:'12:30-40', status:'called',  calledAt:Date.now()-5*60000 },
+  { id:'W-006', ppl:2, round:'12:30-40', status:'pre',     calledAt:null },
+  { id:'W-007', ppl:3, round:'12:30-40', status:'waiting', calledAt:null },
+  { id:'W-008', ppl:5, round:'13:10', status:'waiting', calledAt:null },
+  { id:'W-009', ppl:2, round:'13:10', status:'waiting', calledAt:null },
 ];
 const SEATS = [
   { t:'11:00',    fill:100, s:'full' },
@@ -463,6 +463,7 @@ function fmtTime(t){
   return s;
 }
 function parseRoundMin(r){ const m=String(r).match(/^(\d{1,2}):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
+function shortId(id){ const m=String(id).match(/(\d+)$/); return m?'W-'+m[1]:id; }
 
 // ライブデータ (refreshPanel で更新される)
 let liveQ = [...demoQ];
@@ -542,7 +543,7 @@ async function refreshPanel(){
   if(called.length){
     fcEl.classList.add('on');
     if(fcId!==lastFC){
-      document.getElementById('fc-nums').innerHTML=called.map(x=>`<div class="fc-badge">${x.id}</div>`).join('');
+      document.getElementById('fc-nums').innerHTML=called.map(x=>`<div class="fc-badge">${shortId(x.id)}</div>`).join('');
       lastFC=fcId;
     }
   } else { fcEl.classList.remove('on'); lastFC=''; }
@@ -576,8 +577,8 @@ async function refreshPanel(){
         const sc=x.status==='pre'?'qs-p':'qs-w';
         const sl=x.status==='pre'?'まもなくご案内':`${i+1} 番目`;
         return `<div class="q-item">
-          <div class="qi-num">${x.id}</div>
-          <div><div class="qi-ppl">${x.ppl} 名様</div><div class="qi-rnd">${x.round} の回</div></div>
+          <div class="qi-num">${shortId(x.id)}</div>
+          <div><div class="qi-ppl">${x.ppl} 名様</div><div class="qi-rnd">${fmtTime(x.round)} の回</div></div>
           <div class="qi-status ${sc}">${sl}</div>
         </div>`;
       }).join('')+(waiting.length>5?`<div style="text-align:center;font-family:'Noto Serif JP',serif;font-weight:200;font-size:11px;color:var(--text-dim);padding:8px;letter-spacing:2px">他 ${waiting.length-5} 組</div>`:'');

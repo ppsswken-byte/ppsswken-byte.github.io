@@ -303,13 +303,13 @@ const CONFIG = {
 
 // GAS URL 未設定時のデモデータ
 let data=[
-  {id:'W-003',ppl:3,time:'11:42',round:'12:30',status:'noshow', calledAt:null,note:''},
-  {id:'W-004',ppl:2,time:'11:55',round:'12:30',status:'checkin',calledAt:null,note:''},
-  {id:'W-005',ppl:4,time:'12:02',round:'12:30',status:'called', calledAt:Date.now()-4*60000,note:'お子様連れ'},
-  {id:'W-006',ppl:2,time:'12:14',round:'12:30',status:'waiting',calledAt:null,note:''},
-  {id:'W-007',ppl:2,time:'12:16',round:'12:30',status:'waiting',calledAt:null,note:''},
-  {id:'W-008',ppl:5,time:'12:20',round:'13:00',status:'waiting',calledAt:null,note:''},
-  {id:'W-009',ppl:1,time:'12:28',round:'13:00',status:'waiting',calledAt:null,note:''},
+  {id:'W-003',ppl:3,time:'11:42',round:'12:30-40',status:'noshow', calledAt:null,note:''},
+  {id:'W-004',ppl:2,time:'11:55',round:'12:30-40',status:'checkin',calledAt:null,note:''},
+  {id:'W-005',ppl:4,time:'12:02',round:'12:30-40',status:'called', calledAt:Date.now()-4*60000,note:'お子様連れ'},
+  {id:'W-006',ppl:2,time:'12:14',round:'12:30-40',status:'waiting',calledAt:null,note:''},
+  {id:'W-007',ppl:2,time:'12:16',round:'12:30-40',status:'waiting',calledAt:null,note:''},
+  {id:'W-008',ppl:5,time:'12:20',round:'13:10',status:'waiting',calledAt:null,note:''},
+  {id:'W-009',ppl:1,time:'12:28',round:'13:10',status:'waiting',calledAt:null,note:''},
 ];
 let nid=10, filter='all', rendered=[];
 
@@ -373,7 +373,7 @@ async function loadQueue(){
     ...q,
     calledAt:q.calledAt?Number(q.calledAt):null
   }));
-  const maxNum=data.reduce((m,q)=>Math.max(m,parseInt(q.id.replace('W-',''))||0),0);
+  const maxNum=data.reduce((m,q)=>{const mm=String(q.id).match(/(\d+)$/);return Math.max(m,mm?parseInt(mm[1]):0);},0);
   nid=maxNum+1;
   if(result.seats&&result.seats.length&&Date.now()>seatLockUntil){
     seatData=result.seats.map(s=>({t:fmtTime(s.t||s.time),s:s.s||s.status}));
@@ -394,8 +394,8 @@ const SLBL={
 function fmtTime(t){
   if(!t||t==='null'||t==='undefined') return '--';
   const s=String(t).trim();
-  // すでに HH:MM 形式ならそのまま返す
-  if(/^\d{1,2}:\d{2}$/.test(s)) return s.padStart(5,'0');
+  // すでに HH:MM または HH:MM-MM 形式ならそのまま返す
+  if(/^\d{1,2}:\d{2}([-–]\d{2})?$/.test(s)) return s;
   // フル日付文字列から時刻だけ抽出
   try{
     const d=new Date(s);
@@ -404,6 +404,8 @@ function fmtTime(t){
   }catch(e){}
   return s.substring(0,5);
 }
+// ── 表示用の短い整理番号 (W-MMDD-NNN → W-NNN) ──────────
+function shortId(id){ const m=String(id).match(/(\d+)$/); return m?'W-'+m[1]:id; }
 
 function getFiltered(){
   if(filter==='waiting') return data.filter(x=>x.status==='waiting'||x.status==='pre');
@@ -416,8 +418,8 @@ function noteBadges(note){
   if(!note) return '';
   const badges=[];
   if(note.includes('アラカルト')) badges.push('<span class="nb nb-alc">🍽 アラカルト</span>');
-  const wc=note.match(/車椅子[^\s]*/);
-  if(wc) badges.push(`<span class="nb nb-wc">♿ ${wc[0]}</span>`);
+  const wc=note.match(/車椅子[^\s]*×(\d+)/);
+  if(wc) badges.push(`<span class="nb nb-wc">♿×${wc[1]}</span>`);
   const rem=note.replace(/アラカルト\s?/,'').replace(/車椅子[^\s]*\s?/,'').trim();
   if(rem) badges.push(`<span class="nb nb-note">${rem}</span>`);
   return badges.length?`<div class="note-badges">${badges.join('')}</div>`:'';
@@ -451,7 +453,7 @@ function rowHTML(q){
   }
 
   return `<div class="qrow ${cls}" data-id="${q.id}">
-    <div class="q-num">${q.id}${noteBadges(q.note)}</div>
+    <div class="q-num">${shortId(q.id)}${noteBadges(q.note)}</div>
     <div class="q-time">${fmtTime(q.time)}</div>
     <div class="q-ppl">${q.ppl}名</div>
     <div class="q-round">${fmtTime(q.round)}</div>
@@ -493,31 +495,31 @@ async function doCall(id){
   const q=data.find(x=>x.id===id);if(!q)return;
   q.status='called';q.calledAt=Date.now();rebuild();
   const res=await apiCall({action:'call',id});
-  toast(`📢 ${id} を呼び出しました${res&&res.ok?' — LINE通知送信済み':''}`, 'warning');
+  toast(`📢 ${shortId(id)} を呼び出しました${res&&res.ok?' — LINE通知送信済み':''}`, 'warning');
 }
 async function doIn(id){
   const q=data.find(x=>x.id===id);if(!q)return;
   q.status='checkin';rebuild();
   await apiCall({action:'checkin',id});
-  toast(`✓ ${id} ご入店完了`,'success');
+  toast(`✓ ${shortId(id)} ご入店完了`,'success');
 }
 async function doCancel(id){
   const q=data.find(x=>x.id===id);if(!q)return;
   q.status='noshow';rebuild();
   await apiCall({action:'cancel',id});
-  toast(`${id} 不来店として処理しました`,'error');
+  toast(`${shortId(id)} 不来店として処理しました`,'error');
 }
 async function doRestore(id){
   const q=data.find(x=>x.id===id);if(!q)return;
   q.status='waiting';q.calledAt=null;rebuild();
   await apiCall({action:'restore',id});
-  toast(`${id} を待機列に戻しました`,'warning');
+  toast(`${shortId(id)} を待機列に戻しました`,'warning');
 }
 function checkExpired(){
   let ch=false;
   data.forEach(q=>{
     if(q.status==='called'&&q.calledAt&&(Date.now()-q.calledAt)/1000>=600){
-      q.status='noshow';ch=true;toast(`⏰ ${q.id} 時間超過　自動キャンセル`,'error');
+      q.status='noshow';ch=true;toast(`⏰ ${shortId(q.id)} 時間超過　自動キャンセル`,'error');
     }
   });
   if(ch)rebuild();
@@ -547,7 +549,7 @@ async function addQueue(){
   const fullNote=[wheelchair>0?`車椅子×${wheelchair}`:'', courseType==='alacarte'?'アラカルト':'', note].filter(Boolean).join(' ');
   data.push({id,ppl,time:t,round,status:'waiting',calledAt:null,note:fullNote});
   rebuild();closeModal();
-  toast(`${id} を受付しました（${ppl}名 / ${round}の回）`,'success');
+  toast(`${shortId(id)} を受付しました（${ppl}名 / ${round}の回）`,'success');
   openPM(id);
 }
 
@@ -577,7 +579,7 @@ function ticketHTML(q,ds,ts,ah){
   <div class="tc" style="font-size:9px;color:var(--text-dim);letter-spacing:2px">TOKYO · 新丸の内 6F · ウォークイン整理券</div>
   <div class="tdiv"></div>
   <div class="tc" style="font-size:9px;letter-spacing:3px;color:var(--text-dim)">整　理　番　号</div>
-  <div class="tbig">${q.id}</div>
+  <div class="tbig">${shortId(q.id)}</div>
   <div class="tdiv"></div>
   <div class="trow"><span class="tlbl">ご人数</span><span>${q.ppl} 名様</span></div>
   <div class="trow"><span class="tlbl">ご案内予定</span><span><b>${q.round}</b> の回</span></div>
@@ -605,7 +607,7 @@ function doPrint(){
   <div class="c" style="font-size:9px;letter-spacing:3px;color:#A8937E">TOKYO　新丸の内 6F</div>
   <div class="div"></div>
   <div class="c" style="font-size:10px;letter-spacing:3px;color:#A8937E">整　理　番　号</div>
-  <div class="big">${q.id}</div>
+  <div class="big">${shortId(q.id)}</div>
   <div class="div"></div>
   <div class="row"><span class="d">ご人数</span><span>${q.ppl} 名様</span></div>
   <div class="row"><span class="d">ご案内予定</span><span>${q.round} の回</span></div>
@@ -618,7 +620,7 @@ function doPrint(){
   <div class="ft" style="margin-top:8px;font-weight:500;color:#6B4C35">新丸の内ビルディング 6F</div>`;
   pa.style.display='block'; window.print();
   setTimeout(()=>{pa.style.display='none';pa.innerHTML=''},2000);
-  closePM(); toast(`${q.id} の整理券を印刷しました`,'success');
+  closePM(); toast(`${shortId(q.id)} の整理券を印刷しました`,'success');
 }
 
 // Toast & Clock
