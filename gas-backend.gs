@@ -51,6 +51,7 @@ function doGet(e) {
       case 'addQueue':     result = addQueueByStaff(e.parameter);    break;
       case 'updateSeats':  result = updateSeats(e.parameter);        break;
       case 'resetCounter': result = resetCounterAPI();               break;
+      case 'health':       result = healthCheck();                   break;
       default:             result = { error: 'Unknown action: ' + action };
     }
 
@@ -100,6 +101,17 @@ function updateQueueRow(id, updates) {
   return false;
 }
 
+// ── HELPER: 今日の日付タグ (MMdd) ────────────────────────
+function todayTag() {
+  return Utilities.formatDate(new Date(), 'Asia/Tokyo', 'MMdd');
+}
+
+// ── HELPER: 今日発行された整理券か判定 ───────────────────
+// ID 形式: W-MMdd-NNN  (過去日の行はシートに履歴として残るが表示しない)
+function isTodayId(id) {
+  return String(id).indexOf('W-' + todayTag() + '-') === 0;
+}
+
 // ── HELPER: 次のカウンター番号 ──────────────────────────
 function nextCounter() {
   var prop = PropertiesService.getScriptProperties();
@@ -112,7 +124,7 @@ function nextCounter() {
 // ── getDashboard ─────────────────────────────────────────
 function getDashboard() {
   return {
-    q:     getAllQueue(),
+    q:     getAllQueue().filter(function(q) { return isTodayId(q.id); }),
     seats: getSeats(),
   };
 }
@@ -165,7 +177,7 @@ function registerQueue(params) {
 
   var all   = getAllQueue();
   var ahead = all.filter(function(q) {
-    return q.round === round && (q.status === 'waiting' || q.status === 'pre');
+    return isTodayId(q.id) && q.round === round && (q.status === 'waiting' || q.status === 'pre');
   }).length;
 
   // スマート待ち時間: 回の開始まで + 前の組 * 5分
@@ -204,7 +216,8 @@ function getTicket(id) {
   if (!q) return { error: 'Ticket not found' };
 
   var ahead = all.filter(function(x) {
-    return x.round === q.round &&
+    return isTodayId(x.id) &&
+           x.round === q.round &&
            (x.status === 'waiting' || x.status === 'pre') &&
            x.id < q.id;
   }).length;
@@ -284,7 +297,7 @@ function addQueueByStaff(params) {
 
   var all   = getAllQueue();
   var ahead = all.filter(function(q) {
-    return q.round === round && (q.status === 'waiting' || q.status === 'pre');
+    return isTodayId(q.id) && q.round === round && (q.status === 'waiting' || q.status === 'pre');
   }).length;
 
   getSheet('Queue').appendRow([id, ppl, time, round, 'waiting', '', '', note]);
@@ -312,6 +325,24 @@ function updateSeats(params) {
 function resetCounterAPI() {
   PropertiesService.getScriptProperties().setProperty('QUEUE_COUNTER', '0');
   return { ok: true, message: 'Counter reset to 0' };
+}
+
+// ── healthCheck (check.html 用の自己診断) ─────────────────
+function healthCheck() {
+  var res = { ok: true, now: new Date().toISOString(), today: todayTag() };
+  try {
+    var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+    res.spreadsheet = ss.getName();
+    res.queueSheet  = !!ss.getSheetByName('Queue');
+    res.seatsSheet  = !!ss.getSheetByName('Seats');
+  } catch (e) {
+    res.ok = false;
+    res.spreadsheetError = e.message;
+  }
+  var prop = PropertiesService.getScriptProperties();
+  res.lineTokenSet = !!prop.getProperty('LINE_TOKEN');
+  res.counter      = prop.getProperty('QUEUE_COUNTER');
+  return res;
 }
 
 // ── LINE Messaging API ───────────────────────────────────

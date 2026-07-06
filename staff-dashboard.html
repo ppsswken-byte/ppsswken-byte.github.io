@@ -178,6 +178,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 </head>
 <body>
 
+<div id="offline-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:999;background:#8B3A2F;color:#fff;text-align:center;font-size:12px;letter-spacing:1px;padding:7px 12px;font-family:'Noto Sans JP',sans-serif">⚠️ サーバーに接続できません — 表示中のデータは更新されていません</div>
+
 <div class="topbar">
   <div class="tl">
     <div class="logo">
@@ -365,11 +367,21 @@ async function apiCall(params){
   }catch(e){ return null; }
 }
 
+// ── 今日の日付タグ (MMDD) — ID: W-MMDD-NNN ─────────────
+function todayTag(){
+  const n=new Date();
+  return String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0');
+}
+
 // ── サーバーからデータ取得・同期 ──────────────────────
 async function loadQueue(){
   const result=await apiCall({action:'getDashboard'});
-  if(!result||!result.q) return;
-  data=result.q.map(q=>({
+  const banner=document.getElementById('offline-banner');
+  if(!result||!result.q){ if(banner) banner.style.display='block'; return; }
+  if(banner) banner.style.display='none';
+  // 過去日の整理券はシートに履歴として残るため、今日の分だけ表示する
+  const tag='W-'+todayTag()+'-';
+  data=result.q.filter(q=>String(q.id).startsWith(tag)).map(q=>({
     ...q,
     calledAt:q.calledAt?Number(q.calledAt):null
   }));

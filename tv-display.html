@@ -463,6 +463,7 @@ function fmtTime(t){
   return s;
 }
 function parseRoundMin(r){ const m=String(r).match(/^(\d{1,2}):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
+function todayTag(){ const n=new Date(); return String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0'); }
 
 // ライブデータ (refreshPanel で更新される)
 let liveQ = [...demoQ];
@@ -531,7 +532,11 @@ function updateClock(){
 // ── QUEUE PANEL (surgical) ───────────────────────────────
 let lastSig='', lastFC='';
 async function refreshPanel(){
-  const {q,seats}=await getData();
+  const d=await getData();
+  const seats=(d&&d.seats)||SEATS;
+  // 過去日の整理券は表示しない (ID: W-MMDD-NNN)
+  const tag='W-'+todayTag()+'-';
+  const q=((d&&d.q)||[]).filter(x=>!CONFIG.GAS_URL||String(x.id).startsWith(tag));
   liveQ=q; // ライブデータを更新
   const called=q.filter(x=>x.status==='called');
   const waiting=q.filter(x=>x.status==='waiting'||x.status==='pre');

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Check — The Siam Heritage Tokyo</title>
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+:root{
+  --ivory:#FAFAF8;--warm:#F5F2ED;
+  --br-deep:#3D2B1F;--br-mid:#6B4C35;
+  --gold:#A8843A;
+  --text:#2A1F17;--text-mid:#6B5545;--text-dim:#A8937E;
+  --border:rgba(107,76,53,.13);
+  --red:#8B3A2F;--green:#2D6B4A;--amber:#9C7A1F;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Noto Sans JP','Helvetica Neue',sans-serif;background:var(--ivory);color:var(--text);max-width:640px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:18px;letter-spacing:1px;color:var(--br-mid);margin-bottom:4px}
+.sub{font-size:12px;color:var(--text-dim);margin-bottom:20px}
+.test{background:#fff;border:1px solid var(--border);border-radius:4px;padding:14px 16px;margin-bottom:10px}
+.t-head{display:flex;align-items:center;gap:10px}
+.t-icon{width:22px;text-align:center;font-size:15px}
+.t-name{font-size:14px;font-weight:500;flex:1}
+.t-ms{font-size:11px;color:var(--text-dim)}
+.t-detail{font-size:12px;color:var(--text-mid);margin-top:8px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.t-fix{font-size:12px;background:var(--warm);border-left:3px solid var(--gold);padding:8px 10px;margin-top:8px;line-height:1.7}
+.ok .t-icon{color:var(--green)} .ok .t-name{color:var(--green)}
+.fail .t-icon{color:var(--red)} .fail .t-name{color:var(--red)}
+.warn .t-icon{color:var(--amber)} .warn .t-name{color:var(--amber)}
+.raw{font-family:monospace;font-size:10px;background:var(--warm);padding:8px;border-radius:3px;margin-top:8px;max-height:140px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+button{margin-top:14px;width:100%;padding:12px;background:var(--br-mid);color:#fff;border:0;border-radius:4px;font-size:14px;letter-spacing:1px;cursor:pointer}
+button:disabled{opacity:.5}
+a{color:var(--br-mid)}
+</style>
+</head>
+<body>
+
+<h1>🪷 System Check</h1>
+<div class="sub">หน้าตรวจสอบระบบคิว — The Siam Heritage Tokyo<br>เปิดหน้านี้เมื่อระบบมีปัญหา เพื่อดูว่าส่วนไหนใช้งานไม่ได้</div>
+
+<div id="tests"></div>
+<button id="rerun" onclick="runAll()">▶ ตรวจสอบอีกครั้ง</button>
+
+<script>
+// ต้องตรงกับ CONFIG ใน index.html
+const CONFIG = {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyCd7Fpvq8mbqDR_0mmln22CDUHWs8Bmkgmgxa9SkdUIclopreZT_RgUQ1WopizinG5lw/exec',
+  LIFF_ID: '2009236977-HNXaG3GD',
+};
+
+const testsEl = document.getElementById('tests');
+
+function renderTest(id, name){
+  const div = document.createElement('div');
+  div.className = 'test';
+  div.id = 'test-' + id;
+  div.innerHTML = `<div class="t-head"><div class="t-icon">⏳</div><div class="t-name">${name}</div><div class="t-ms"></div></div><div class="t-detail">กำลังตรวจสอบ…</div>`;
+  testsEl.appendChild(div);
+  return div;
+}
+
+function setResult(div, state, detail, fix, raw, ms){
+  div.className = 'test ' + state;
+  div.querySelector('.t-icon').textContent = state === 'ok' ? '✅' : state === 'warn' ? '⚠️' : '❌';
+  div.querySelector('.t-ms').textContent = ms != null ? ms + ' ms' : '';
+  div.querySelector('.t-detail').innerHTML = detail;
+  const old = div.querySelectorAll('.t-fix,.raw'); old.forEach(e => e.remove());
+  if (fix){ const f = document.createElement('div'); f.className = 't-fix'; f.innerHTML = '🔧 ' + fix; div.appendChild(f); }
+  if (raw){ const r = document.createElement('div'); r.className = 'raw'; r.textContent = raw; div.appendChild(r); }
+}
+
+function todayTag(){
+  const n = new Date();
+  return String(n.getMonth()+1).padStart(2,'0') + String(n.getDate()).padStart(2,'0');
+}
+
+async function fetchJson(params, timeoutMs){
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs || 20000);
+  const t0 = performance.now();
+  try{
+    const r = await fetch(CONFIG.GAS_URL + '?' + new URLSearchParams(params), { signal: ctrl.signal });
+    const text = await r.text();
+    const ms = Math.round(performance.now() - t0);
+    let json = null;
+    try{ json = JSON.parse(text); }catch(e){}
+    return { ok: r.ok, status: r.status, json, text, ms };
+  }catch(e){
+    return { ok: false, error: e.name === 'AbortError' ? 'Timeout (เกิน ' + ((timeoutMs||20000)/1000) + ' วินาที)' : e.message, ms: Math.round(performance.now() - t0) };
+  }finally{ clearTimeout(t); }
+}
+
+async function runAll(){
+  document.getElementById('rerun').disabled = true;
+  testsEl.innerHTML = '';
+
+  // ── 0. หน้าเว็บโหลดได้ ──
+  const t0 = renderTest('page', 'GitHub Pages (หน้าเว็บ)');
+  setResult(t0, 'ok', 'หน้านี้โหลดได้ = GitHub Pages ทำงานปกติ<br>URL: ' + location.origin);
+
+  // ── 1. GAS backend เชื่อมต่อได้ ──
+  const t1 = renderTest('gas', 'Google Apps Script (backend)');
+  const dash = await fetchJson({ action: 'getDashboard' });
+  let dashOk = false;
+  if (dash.error){
+    setResult(t1, 'fail',
+      'เชื่อมต่อ backend ไม่ได้: <b>' + dash.error + '</b>',
+      'เปิด Google Apps Script → Deploy → ตรวจว่า deployment ยังอยู่ และตั้งค่า "Who has access: Anyone"<br>ถ้า deploy ใหม่แล้วได้ URL ใหม่ ต้องอัปเดต CONFIG.GAS_URL ใน index.html / staff-dashboard.html / tv-display.html / check.html',
+      null, dash.ms);
+  } else if (dash.json && dash.json.error){
+    setResult(t1, 'fail',
+      'Backend ตอบกลับแต่มี error: <b>' + dash.json.error + '</b>',
+      'ถ้า error เกี่ยวกับ Spreadsheet ให้ตรวจว่า Google Sheet (SPREADSHEET_ID ใน gas-backend.gs) ยังอยู่ ไม่ถูกลบ/ย้าย และบัญชี Google ที่ deploy ยังเข้าถึงได้',
+      dash.text && dash.text.slice(0, 500), dash.ms);
+  } else if (dash.json && Array.isArray(dash.json.q)){
+    dashOk = true;
+    setResult(t1, 'ok', 'Backend ตอบกลับปกติ (HTTP ' + dash.status + ')', null, null, dash.ms);
+  } else {
+    setResult(t1, 'fail',
+      'Backend ตอบกลับ แต่ไม่ใช่ข้อมูล JSON ที่คาดไว้ (อาจเป็นหน้า login ของ Google)',
+      'Deployment อาจตั้งค่า access ผิด — Deploy ใหม่โดยเลือก "Execute as: Me" และ "Who has access: Anyone"',
+      dash.text && dash.text.slice(0, 500), dash.ms);
+  }
+
+  // ── 2. ข้อมูลคิว ──
+  const t2 = renderTest('data', 'ข้อมูลคิว (Queue data)');
+  if (dashOk){
+    const q = dash.json.q, seats = dash.json.seats || [];
+    const tag = 'W-' + todayTag() + '-';
+    const today = q.filter(x => String(x.id).startsWith(tag)).length;
+    const stale = q.length - today;
+    if (stale > 0){
+      setResult(t2, 'warn',
+        'มีคิวทั้งหมด ' + q.length + ' รายการ — ของวันนี้ ' + today + ' รายการ, <b>ของวันเก่าค้างอยู่ ' + stale + ' รายการ</b><br>ที่นั่ง (Seats): ' + seats.length + ' รอบ',
+        'Backend ยังเป็นเวอร์ชันเก่าที่ส่งคิวทุกวันมาทั้งหมด — ให้ deploy gas-backend.gs เวอร์ชันล่าสุด (มี filter เฉพาะวันนี้แล้ว) หน้าจอฝั่งเว็บกรองให้แล้วจึงยังใช้งานได้');
+    } else {
+      setResult(t2, 'ok', 'คิววันนี้: ' + today + ' รายการ · ที่นั่ง (Seats): ' + seats.length + ' รอบ');
+    }
+  } else {
+    setResult(t2, 'fail', 'ข้ามการตรวจ — backend เชื่อมต่อไม่ได้');
+  }
+
+  // ── 3. Backend เวอร์ชันล่าสุด (health action) ──
+  const t3 = renderTest('health', 'Backend เวอร์ชัน / Google Sheet / LINE token');
+  if (dashOk){
+    const h = await fetchJson({ action: 'health' });
+    const hj = h.json;
+    if (hj && hj.error && String(hj.error).startsWith('Unknown action')){
+      setResult(t3, 'warn',
+        'Backend ที่ deploy อยู่เป็น<b>เวอร์ชันเก่า</b> (ยังไม่มีระบบตรวจสอบตัวเอง)',
+        'เปิด Google Sheet → Extensions → Apps Script → วางโค้ด gas-backend.gs เวอร์ชันล่าสุดทับ → Deploy → Manage deployments → เลือก deployment เดิม → ✏️ Edit → Version: New version → Deploy (URL จะไม่เปลี่ยน)',
+        null, h.ms);
+    } else if (hj && hj.ok){
+      setResult(t3, 'ok',
+        'Spreadsheet: <b>' + (hj.spreadsheet || '-') + '</b> (Queue: ' + (hj.queueSheet ? '✓' : '✗ ไม่พบ') + ', Seats: ' + (hj.seatsSheet ? '✓' : '✗ ไม่พบ') + ')<br>' +
+        'LINE token: ' + (hj.lineTokenSet ? '✓ ตั้งค่าแล้ว' : '✗ ยังไม่ตั้งค่า — แจ้งเตือน LINE จะไม่ทำงาน') + '<br>' +
+        'เลขคิวปัจจุบัน (counter): ' + hj.counter,
+        (!hj.lineTokenSet ? 'รัน setLineToken() ใน Apps Script โดยใส่ Channel Access Token จาก LINE Developers Console' : null),
+        null, h.ms);
+    } else if (hj && hj.spreadsheetError){
+      setResult(t3, 'fail',
+        'เปิด Google Sheet ไม่ได้: <b>' + hj.spreadsheetError + '</b>',
+        'ตรวจว่า Spreadsheet (ID ใน gas-backend.gs) ยังอยู่ในบัญชี Google เดิม ไม่ถูกลบหรือย้ายไปถังขยะ',
+        null, h.ms);
+    } else {
+      setResult(t3, 'warn', 'ตรวจไม่ได้ — คำตอบไม่ตรงรูปแบบ', null, h.text && h.text.slice(0, 300), h.ms);
+    }
+  } else {
+    setResult(t3, 'fail', 'ข้ามการตรวจ — backend เชื่อมต่อไม่ได้');
+  }
+
+  // ── 4. LIFF (LINE Login) ──
+  const t4 = renderTest('liff', 'LINE LIFF (' + CONFIG.LIFF_ID + ')');
+  if (typeof liff === 'undefined'){
+    setResult(t4, 'fail', 'โหลด LIFF SDK จาก LINE ไม่ได้ (static.line-scdn.net)', 'ตรวจอินเทอร์เน็ต หรือ firewall ที่บล็อก line-scdn.net');
+  } else {
+    try{
+      const tL0 = performance.now();
+      await liff.init({ liffId: CONFIG.LIFF_ID });
+      const msL = Math.round(performance.now() - tL0);
+      setResult(t4, 'ok',
+        'LIFF ID ยังใช้งานได้ · สถานะ login: ' + (liff.isLoggedIn() ? '✓ login แล้ว' : 'ยังไม่ login (ปกติเมื่อเปิดนอกแอป LINE)'),
+        null, null, msL);
+    }catch(e){
+      setResult(t4, 'fail',
+        'liff.init ล้มเหลว: <b>' + (e.message || e) + '</b>',
+        'เปิด <a href="https://developers.line.biz/console/" target="_blank">LINE Developers Console</a> → ตรวจว่า Channel/LIFF app ยังอยู่ ไม่ถูกลบ และ Endpoint URL ชี้มาที่ ' + location.origin + '/index.html<br>ถ้าสร้าง LIFF ใหม่ ต้องอัปเดต CONFIG.LIFF_ID ใน index.html และ check.html');
+    }
+  }
+
+  document.getElementById('rerun').disabled = false;
+}
+
+runAll();
+</script>
+</body>
+</html>
