@@ -174,6 +174,21 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
 
 #print-area{display:none}
 @media print{body>*:not(#print-area){display:none!important}#print-area{display:block!important;position:fixed;inset:0;background:white;z-index:9999}}
+
+/* ── TV 映像コントロール ── */
+.tv-card{background:#fff;border:1px solid var(--border);border-radius:3px;padding:10px;display:flex;flex-direction:column;gap:9px}
+.tv-modes{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px}
+.tvm{padding:7px 2px;background:var(--warm);color:var(--text-dim);border:1px solid var(--border);border-radius:2px;font-family:'Noto Sans JP',sans-serif;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all .15s}
+.tvm.on{background:var(--br-mid);color:var(--ivory);border-color:var(--br-mid)}
+.tv-holiday{display:flex;align-items:center;gap:7px;font-family:'Noto Sans JP',sans-serif;font-size:10.5px;color:var(--text-mid);cursor:pointer;user-select:none}
+.tv-holiday input{accent-color:var(--br-mid);width:14px;height:14px;cursor:pointer}
+.tv-times{display:flex;flex-direction:column;gap:5px;border-top:1px dashed var(--border);padding-top:9px}
+.tv-trow{display:flex;align-items:center;gap:5px;font-family:'Noto Sans JP',sans-serif;font-size:10px;color:var(--text-dim)}
+.tv-trow .tl{flex:1;letter-spacing:.5px}
+.tv-trow input[type=time]{width:74px;padding:3px 4px;border:1px solid var(--border);border-radius:2px;font-family:'Noto Sans JP',sans-serif;font-size:10.5px;color:var(--text);background:var(--ivory)}
+.tv-save{margin-top:3px;padding:7px;background:transparent;color:var(--br-mid);border:1px solid rgba(107,76,53,.35);border-radius:2px;font-family:'Noto Sans JP',sans-serif;font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .15s}
+.tv-save:hover{background:var(--br-mid);color:var(--ivory)}
+.tv-note{font-family:'Noto Sans JP',sans-serif;font-size:9px;color:var(--text-dim);line-height:1.6}
 </style>
 </head>
 <body>
@@ -214,6 +229,26 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--t
     <div>
       <div class="sec-lbl">お席の状況 <span style="font-size:9px;letter-spacing:0;color:var(--br-pale);font-family:'Noto Sans JP',sans-serif">タップで変更</span></div>
       <div class="slot-list" id="slot-list"></div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">TV ディスプレイ映像</div>
+      <div class="tv-card">
+        <div class="tv-modes">
+          <button class="tvm" data-m="auto"   onclick="setTvMode('auto')">自動</button>
+          <button class="tvm" data-m="lunch"  onclick="setTvMode('lunch')">ランチ</button>
+          <button class="tvm" data-m="dinner" onclick="setTvMode('dinner')">ディナー</button>
+          <button class="tvm" data-m="off"    onclick="setTvMode('off')">ロゴ</button>
+        </div>
+        <label class="tv-holiday"><input type="checkbox" id="tv-holiday" onchange="setTvHoliday(this.checked)">本日は土日祝スケジュール（祝日にON）</label>
+        <div class="tv-times">
+          <div class="tv-trow"><span class="tl">平日ランチ</span><input type="time" id="tv-wdf"> 〜 <input type="time" id="tv-wdt"></div>
+          <div class="tv-trow"><span class="tl">土日祝ランチ</span><input type="time" id="tv-wef"> 〜 <input type="time" id="tv-wet"></div>
+          <div class="tv-trow"><span class="tl">ディナー</span><input type="time" id="tv-dnf"> 〜 <input type="time" id="tv-dnt"></div>
+          <button class="tv-save" onclick="saveTvTimes()">時間を保存</button>
+        </div>
+        <div class="tv-note">「自動」= 上記の時間帯でランチ／ディナー映像を自動切替。時間外はロゴ表示。TV画面には30秒以内に反映されます。</div>
+      </div>
     </div>
 
     <button class="btn-add" onclick="openModal()">＋　ウォークイン　新規受付</button>
@@ -390,8 +425,55 @@ async function loadQueue(){
   if(result.seats&&result.seats.length&&Date.now()>seatLockUntil){
     seatData=result.seats.map(s=>({t:fmtTime(s.t||s.time),s:s.s||s.status}));
   }
+  if(result.tv&&typeof result.tv==='object'&&Date.now()>tvLockUntil){
+    tvCfg=result.tv; renderTv();
+  }
   rebuild();
   renderSeats();
+}
+
+// ── TV 映像コントロール ──────────────────────────────
+let tvCfg=null;
+let tvLockUntil=0; // 操作直後に poll が上書きするのを防ぐ
+
+function renderTv(){
+  if(!tvCfg) return;
+  document.querySelectorAll('.tvm').forEach(b=>b.classList.toggle('on',b.dataset.m===tvCfg.mode));
+  const hol=document.getElementById('tv-holiday');
+  if(hol) hol.checked=(tvCfg.holiday===true||String(tvCfg.holiday)==='true');
+  const map={'tv-wdf':'wdFrom','tv-wdt':'wdTo','tv-wef':'weFrom','tv-wet':'weTo','tv-dnf':'dnFrom','tv-dnt':'dnTo'};
+  for(const id in map){
+    const el=document.getElementById(id);
+    if(el&&document.activeElement!==el&&tvCfg[map[id]]) el.value=String(tvCfg[map[id]]).padStart(5,'0');
+  }
+}
+
+async function setTvMode(m){
+  tvCfg=tvCfg||{}; tvCfg.mode=m; tvLockUntil=Date.now()+8000; renderTv();
+  const res=await apiCall({action:'setTv',mode:m});
+  if(res&&res.ok){
+    const lbl={auto:'自動切替',lunch:'ランチ映像',dinner:'ディナー映像',off:'ロゴ表示'}[m];
+    toast('TV映像を「'+lbl+'」に設定しました','success');
+  } else {
+    toast('TV設定の保存に失敗しました（旧バージョンのバックエンドの可能性）','error');
+  }
+}
+
+async function setTvHoliday(on){
+  tvCfg=tvCfg||{}; tvCfg.holiday=on; tvLockUntil=Date.now()+8000;
+  const res=await apiCall({action:'setTv',holiday:on?'true':'false'});
+  if(res&&res.ok) toast(on?'本日は土日祝スケジュールに設定しました':'平日スケジュールに戻しました','success');
+  else toast('TV設定の保存に失敗しました','error');
+}
+
+async function saveTvTimes(){
+  const v=id=>document.getElementById(id).value;
+  const p={action:'setTv',wdFrom:v('tv-wdf'),wdTo:v('tv-wdt'),weFrom:v('tv-wef'),weTo:v('tv-wet'),dnFrom:v('tv-dnf'),dnTo:v('tv-dnt')};
+  for(const k in p){ if(k!=='action'&&!/^\d{1,2}:\d{2}$/.test(p[k])){ toast('時間の形式が正しくありません','error'); return; } }
+  tvLockUntil=Date.now()+8000;
+  const res=await apiCall(p);
+  if(res&&res.ok){ tvCfg=res.tv||tvCfg; renderTv(); toast('切替時間を保存しました','success'); }
+  else toast('時間の保存に失敗しました','error');
 }
 
 const SLBL={

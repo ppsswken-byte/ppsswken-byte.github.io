@@ -51,6 +51,8 @@ function doGet(e) {
       case 'addQueue':     result = addQueueByStaff(e.parameter);    break;
       case 'updateSeats':  result = updateSeats(e.parameter);        break;
       case 'resetCounter': result = resetCounterAPI();               break;
+      case 'getTv':        result = getTvConfig();                   break;
+      case 'setTv':        result = setTvConfig(e.parameter);        break;
       case 'health':       result = healthCheck();                   break;
       default:             result = { error: 'Unknown action: ' + action };
     }
@@ -126,7 +128,46 @@ function getDashboard() {
   return {
     q:     getAllQueue().filter(function(q) { return isTodayId(q.id); }),
     seats: getSeats(),
+    tv:    getTvConfig(),
   };
+}
+
+// ── TV ディスプレイ映像設定 ──────────────────────────────
+// mode: 'auto'   = 時間帯で自動切替（下記スケジュール）
+//       'lunch'  = ランチ映像を強制表示
+//       'dinner' = ディナー映像を強制表示
+//       'off'    = 映像なし（ロゴ表示）
+// holiday: true = 本日は土日祝スケジュールを使う（平日でも祝日の場合にスタッフがON）
+var TV_DEFAULTS = {
+  mode: 'auto',
+  wdFrom: '10:45', wdTo: '15:01',   // 平日ランチ
+  weFrom: '10:45', weTo: '16:01',   // 土日祝ランチ
+  dnFrom: '16:45', dnTo: '23:01',   // ディナー（毎日）
+  holiday: false,
+};
+
+function getTvConfig() {
+  var raw = PropertiesService.getScriptProperties().getProperty('TV_CONFIG');
+  var cfg = {};
+  try { cfg = raw ? JSON.parse(raw) : {}; } catch (e) { cfg = {}; }
+  var out = {};
+  for (var k in TV_DEFAULTS) out[k] = (k in cfg) ? cfg[k] : TV_DEFAULTS[k];
+  return out;
+}
+
+function setTvConfig(p) {
+  var cfg = getTvConfig();
+  if (p.mode !== undefined) {
+    var m = String(p.mode);
+    if (['auto', 'lunch', 'dinner', 'off'].indexOf(m) === -1) return { error: 'Invalid mode: ' + m };
+    cfg.mode = m;
+  }
+  ['wdFrom', 'wdTo', 'weFrom', 'weTo', 'dnFrom', 'dnTo'].forEach(function(k) {
+    if (p[k] !== undefined && /^\d{1,2}:\d{2}$/.test(String(p[k]))) cfg[k] = String(p[k]);
+  });
+  if (p.holiday !== undefined) cfg.holiday = (String(p.holiday) === 'true');
+  PropertiesService.getScriptProperties().setProperty('TV_CONFIG', JSON.stringify(cfg));
+  return { ok: true, tv: cfg };
 }
 
 // ── HELPER: Date / 文字列 → HH:mm 文字列 ─────────────────
