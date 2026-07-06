@@ -407,12 +407,15 @@ html,body{
 
 <script>
 // ── VIDEO PLAYLIST ──────────────────────────────────────
-// ビデオファイルの準備ができたら下記のコメントを外して設定してください
-const VIDEOS = [
-  // { src:'videos/intro.mp4',   sec:30 },
-  // { src:'videos/food.mp4',    sec:45 },
-  // { src:'videos/ambient.mp4', sec:60 },
-];
+// ランチ／ディナーそれぞれの動画ファイル（videos/ フォルダにアップロード）
+// 複数入れると順番にループ再生されます
+const LUNCH_VIDEOS  = ['videos/lunch.mp4'];
+const DINNER_VIDEOS = ['videos/dinner.mp4'];
+
+// 切替スケジュールの初期値 — スタッフダッシュボードから変更でき、
+// バックエンドに保存された設定が30秒ごとにこの画面へ反映される
+const TV_DEFAULTS = { mode:'auto', wdFrom:'10:45', wdTo:'15:01', weFrom:'10:45', weTo:'16:01', dnFrom:'16:45', dnTo:'23:01', holiday:false };
+let tvCfg = {...TV_DEFAULTS};
 
 // ── PROMO ROTATION ──────────────────────────────────────
 const PROMOS = [
@@ -474,28 +477,57 @@ async function getData(){
   catch{ return {q:liveQ, seats:SEATS}; }
 }
 
-// ── VIDEO INIT ───────────────────────────────────────────
-function initVideo(){
-  if(!VIDEOS.length) return;
-  document.querySelector('.placeholder').style.display='none';
+// ── VIDEO SCHEDULER ──────────────────────────────────────
+// tvCfg に従ってランチ／ディナー映像を自動切替する
+// mode: auto=時間帯で自動 / lunch・dinner=強制 / off=ロゴ表示
+let curVidSet=null, vidEls=[], vidIdx=0;
+
+function hmToMin(s){ const m=String(s).match(/^(\d{1,2}):(\d{2})$/); return m?(+m[1])*60+(+m[2]):null; }
+
+function activeVideoSet(){
+  if(tvCfg.mode==='lunch')  return 'lunch';
+  if(tvCfg.mode==='dinner') return 'dinner';
+  if(tvCfg.mode==='off')    return '';
+  const n=new Date(), now=n.getHours()*60+n.getMinutes();
+  const weekend = tvCfg.holiday===true || String(tvCfg.holiday)==='true' || n.getDay()===0 || n.getDay()===6;
+  const lf=hmToMin(weekend?tvCfg.weFrom:tvCfg.wdFrom), lt=hmToMin(weekend?tvCfg.weTo:tvCfg.wdTo);
+  const df=hmToMin(tvCfg.dnFrom), dt=hmToMin(tvCfg.dnTo);
+  if(lf!=null&&lt!=null&&now>=lf&&now<lt) return 'lunch';
+  if(df!=null&&dt!=null&&now>=df&&now<dt) return 'dinner';
+  return '';
+}
+
+function applyVideo(){
+  const want=activeVideoSet();
+  if(want===curVidSet) return;
+  curVidSet=want;
+  vidEls.forEach(el=>{ try{el.pause();}catch(e){} el.remove(); });
+  vidEls=[]; vidIdx=0;
+  const ph=document.querySelector('.placeholder');
+  const files = want==='lunch'?LUNCH_VIDEOS : want==='dinner'?DINNER_VIDEOS : [];
+  if(!files.length){ ph.style.display=''; return; }
+  ph.style.display='none';
   const z=document.querySelector('.video-zone');
-  let cur=0;
-  const els=VIDEOS.map((v,i)=>{
+  vidEls=files.map((src,i)=>{
     const el=document.createElement('video');
     el.className='vid'+(i===0?' on':'');
-    el.muted=true; el.playsinline=true; el.preload='auto';
-    el.innerHTML=`<source src="${v.src}" type="video/mp4">`;
+    el.muted=true; el.setAttribute('playsinline',''); el.preload='auto';
+    if(files.length===1) el.loop=true;
+    el.src=src;
+    if(files.length>1) el.addEventListener('ended',nextVid);
+    // ファイルが見つからない等の場合はロゴにフォールバック
+    el.addEventListener('error',()=>{ if(vidEls.length&&vidEls.every(v=>v.error)) ph.style.display=''; });
     z.insertBefore(el,z.firstChild); return el;
   });
-  els[0].play();
-  function next(){
-    els[cur].classList.remove('on');
-    cur=(cur+1)%els.length;
-    els[cur].classList.add('on');
-    els[cur].currentTime=0; els[cur].play();
-    setTimeout(next,VIDEOS[cur].sec*1000);
-  }
-  setTimeout(next,VIDEOS[0].sec*1000);
+  vidEls[0].play().catch(()=>{});
+}
+
+function nextVid(){
+  if(!vidEls.length) return;
+  vidEls[vidIdx].classList.remove('on');
+  vidIdx=(vidIdx+1)%vidEls.length;
+  const el=vidEls[vidIdx];
+  el.classList.add('on'); el.currentTime=0; el.play().catch(()=>{});
 }
 
 // ── PROMO ────────────────────────────────────────────────
@@ -533,6 +565,8 @@ function updateClock(){
 let lastSig='', lastFC='';
 async function refreshPanel(){
   const d=await getData();
+  if(d&&d.tv&&typeof d.tv==='object') tvCfg={...TV_DEFAULTS,...d.tv};
+  applyVideo();
   const seats=(d&&d.seats)||SEATS;
   // 過去日の整理券は表示しない (ID: W-MMDD-NNN)
   const tag='W-'+todayTag()+'-';
@@ -629,13 +663,14 @@ function patchFC(){
     title.insertBefore(img,title.firstChild);
   }
 })();
-initVideo();
+applyVideo();
 initTicker();
 updateClock();
 refreshPanel();
 setTimeout(()=>{ showPromo(); setInterval(showPromo,22000); },7000);
 setInterval(()=>{ updateClock(); patchFC(); },1000);
 setInterval(refreshPanel,30000);
+setInterval(applyVideo,60000); // サーバー接続不可時でも時間帯切替を保証
 </script>
 </body>
 </html>
