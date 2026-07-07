@@ -407,10 +407,12 @@ html,body{
 
 <script>
 // ── VIDEO PLAYLIST ──────────────────────────────────────
-// ランチ／ディナーそれぞれの動画ファイル（videos/ フォルダにアップロード）
-// 複数入れると順番にループ再生されます
-const LUNCH_VIDEOS  = ['videos/lunch.mp4'];
-const DINNER_VIDEOS = ['videos/dinner.mp4'];
+// 動画は GitHub Release (videos-v1) にアップロードされている
+// 差し替えるときは Release に新ファイルを追加してここのファイル名を変更する
+const VIDEO_BASE = 'https://github.com/ppsswken-byte/ppsswken-byte.github.io/releases/download/videos-v1/';
+const LUNCH_WD_VIDEOS  = ['lunch.buffet.weekday.mp4', 'lunch.course.mp4'].map(f=>VIDEO_BASE+f);           // 平日ランチ
+const LUNCH_HOL_VIDEOS = ['lunch.buffet.holiday.mp4', 'lunch.course.mp4'].map(f=>VIDEO_BASE+f);           // 土日祝ランチ
+const DINNER_VIDEOS    = ['dinner.a.la.carte.202511.mp4', 'dinner.course.202511.mp4'].map(f=>VIDEO_BASE+f); // ディナー
 
 // 切替スケジュールの初期値 — スタッフダッシュボードから変更でき、
 // バックエンドに保存された設定が30秒ごとにこの画面へ反映される
@@ -484,15 +486,20 @@ let curVidSet=null, vidEls=[], vidIdx=0;
 
 function hmToMin(s){ const m=String(s).match(/^(\d{1,2}):(\d{2})$/); return m?(+m[1])*60+(+m[2]):null; }
 
+function isWeekendToday(){
+  const n=new Date();
+  return tvCfg.holiday===true || String(tvCfg.holiday)==='true' || n.getDay()===0 || n.getDay()===6;
+}
+
 function activeVideoSet(){
-  if(tvCfg.mode==='lunch')  return 'lunch';
+  const weekend=isWeekendToday();
+  if(tvCfg.mode==='lunch')  return weekend?'lunch-hol':'lunch-wd';
   if(tvCfg.mode==='dinner') return 'dinner';
   if(tvCfg.mode==='off')    return '';
   const n=new Date(), now=n.getHours()*60+n.getMinutes();
-  const weekend = tvCfg.holiday===true || String(tvCfg.holiday)==='true' || n.getDay()===0 || n.getDay()===6;
   const lf=hmToMin(weekend?tvCfg.weFrom:tvCfg.wdFrom), lt=hmToMin(weekend?tvCfg.weTo:tvCfg.wdTo);
   const df=hmToMin(tvCfg.dnFrom), dt=hmToMin(tvCfg.dnTo);
-  if(lf!=null&&lt!=null&&now>=lf&&now<lt) return 'lunch';
+  if(lf!=null&&lt!=null&&now>=lf&&now<lt) return weekend?'lunch-hol':'lunch-wd';
   if(df!=null&&dt!=null&&now>=df&&now<dt) return 'dinner';
   return '';
 }
@@ -504,7 +511,7 @@ function applyVideo(){
   vidEls.forEach(el=>{ try{el.pause();}catch(e){} el.remove(); });
   vidEls=[]; vidIdx=0;
   const ph=document.querySelector('.placeholder');
-  const files = want==='lunch'?LUNCH_VIDEOS : want==='dinner'?DINNER_VIDEOS : [];
+  const files = want==='lunch-wd'?LUNCH_WD_VIDEOS : want==='lunch-hol'?LUNCH_HOL_VIDEOS : want==='dinner'?DINNER_VIDEOS : [];
   if(!files.length){ ph.style.display=''; return; }
   ph.style.display='none';
   const z=document.querySelector('.video-zone');
