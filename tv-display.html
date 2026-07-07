@@ -44,7 +44,7 @@ html,body{
 .video-zone{position:relative;overflow:hidden;background:#1C1510}
 
 /* Real video elements */
-.vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 2.4s ease;z-index:0}
+.vid{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity 2.4s ease;z-index:0}
 .vid.on{opacity:1}
 
 /* ── PLACEHOLDER (demo, remove when video ready) ── */
@@ -407,9 +407,9 @@ html,body{
 
 <script>
 // ── VIDEO PLAYLIST ──────────────────────────────────────
-// 動画は GitHub Release (videos-v1) にアップロードされている
-// 差し替えるときは Release に新ファイルを追加してここのファイル名を変更する
-const VIDEO_BASE = 'https://github.com/ppsswken-byte/ppsswken-byte.github.io/releases/download/videos-v1/';
+// 動画は repo の videos/ フォルダにある（縦向きに修正済み・1080×1920）
+// 差し替えるときはファイルを videos/ に追加してここのファイル名を変更する
+const VIDEO_BASE = 'videos/';
 const LUNCH_WD_VIDEOS  = ['lunch.buffet.weekday.mp4', 'lunch.course.mp4'].map(f=>VIDEO_BASE+f);           // 平日ランチ
 const LUNCH_HOL_VIDEOS = ['lunch.buffet.holiday.mp4', 'lunch.course.mp4'].map(f=>VIDEO_BASE+f);           // 土日祝ランチ
 const DINNER_VIDEOS    = ['dinner.a.la.carte.202511.mp4', 'dinner.course.202511.mp4'].map(f=>VIDEO_BASE+f); // ディナー
@@ -511,9 +511,14 @@ function applyVideo(){
   vidEls.forEach(el=>{ try{el.pause();}catch(e){} el.remove(); });
   vidEls=[]; vidIdx=0;
   const ph=document.querySelector('.placeholder');
+  const vzTop=document.querySelector('.vz-top');
+  const promoEl=document.getElementById('promo');
   const files = want==='lunch-wd'?LUNCH_WD_VIDEOS : want==='lunch-hol'?LUNCH_HOL_VIDEOS : want==='dinner'?DINNER_VIDEOS : [];
-  if(!files.length){ ph.style.display=''; return; }
+  if(!files.length){ ph.style.display=''; if(vzTop) vzTop.style.display=''; return; }
   ph.style.display='none';
+  // ポスター動画に店名ロゴが入っているため、再生中は重複するオーバーレイを隠す
+  if(vzTop) vzTop.style.display='none';
+  if(promoEl) promoEl.classList.remove('on');
   const z=document.querySelector('.video-zone');
   vidEls=files.map((src,i)=>{
     const el=document.createElement('video');
@@ -540,6 +545,8 @@ function nextVid(){
 // ── PROMO ────────────────────────────────────────────────
 let pi=0;
 function showPromo(){
+  // 動画再生中はプロモカードを表示しない（動画に被って透かしのように見えるため）
+  if(curVidSet) return;
   const p=PROMOS[pi];
   const el=document.getElementById('promo');
   el.innerHTML=`<div class="promo-emoji">${p.e}</div>

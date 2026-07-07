@@ -1,8 +1,9 @@
 # วิดีโอสำหรับจอ TV
 
-วิดีโอ**ไม่ได้เก็บในโฟลเดอร์นี้** — เก็บไว้ที่ GitHub Release เพราะไฟล์ใหญ่เกินลิมิตอัปโหลดของ repo (25 MB)
+ไฟล์ในโฟลเดอร์นี้เป็นเวอร์ชัน**หมุนตั้งตรงแล้ว (1080×1920)** พร้อมใช้กับจอ TV แนวตั้ง
+(ไฟล์ต้นฉบับแนวนอนยังอยู่ที่ [Release videos-v1](https://github.com/ppsswken-byte/ppsswken-byte.github.io/releases/tag/videos-v1) เป็น backup)
 
-📦 **ที่เก็บวิดีโอ:** https://github.com/ppsswken-byte/ppsswken-byte.github.io/releases/tag/videos-v1
+> หมายเหตุ: การอัปโหลดผ่านหน้าเว็บ GitHub จำกัด 25 MB/ไฟล์ แต่การ push ผ่าน git รับได้ถึง 100 MB/ไฟล์ — ไฟล์ชุดนี้ถูก push ผ่าน git
 
 ## ตารางการเล่น (ค่าเริ่มต้น — แก้ได้จาก staff-dashboard)
 
