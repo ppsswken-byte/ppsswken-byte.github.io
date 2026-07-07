@@ -512,12 +512,14 @@ function applyVideo(){
   vidEls=[]; vidIdx=0;
   const ph=document.querySelector('.placeholder');
   const vzTop=document.querySelector('.vz-top');
+  const vzBot=document.querySelector('.vz-bot');
   const promoEl=document.getElementById('promo');
   const files = want==='lunch-wd'?LUNCH_WD_VIDEOS : want==='lunch-hol'?LUNCH_HOL_VIDEOS : want==='dinner'?DINNER_VIDEOS : [];
-  if(!files.length){ ph.style.display=''; if(vzTop) vzTop.style.display=''; return; }
+  if(!files.length){ ph.style.display=''; if(vzTop) vzTop.style.display=''; if(vzBot) vzBot.style.display=''; return; }
   ph.style.display='none';
-  // ポスター動画に店名ロゴが入っているため、再生中は重複するオーバーレイを隠す
+  // ポスター動画に価格・ロゴが入っているため、再生中は重複するオーバーレイを全て隠す
   if(vzTop) vzTop.style.display='none';
+  if(vzBot) vzBot.style.display='none';
   if(promoEl) promoEl.classList.remove('on');
   const z=document.querySelector('.video-zone');
   vidEls=files.map((src,i)=>{
