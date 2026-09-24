@@ -52,6 +52,7 @@ function doGet(e) {
       case 'updateSeats':  result = updateSeats(e.parameter);        break;
       case 'resetCounter': result = resetCounterAPI();               break;
       case 'getTv':        result = getTvConfig();                   break;
+      case 'linkLine':     result = linkLine(e.parameter);           break;
       case 'setTv':        result = setTvConfig(e.parameter);        break;
       case 'health':       result = healthCheck();                   break;
       default:             result = { error: 'Unknown action: ' + action };
@@ -97,6 +98,7 @@ function updateQueueRow(id, updates) {
     if (String(data[i][0]) === String(id)) {
       if ('status'   in updates) sheet.getRange(i + 1, 5).setValue(updates.status);
       if ('calledAt' in updates) sheet.getRange(i + 1, 6).setValue(updates.calledAt !== null ? updates.calledAt : '');
+      if ('lineUserId' in updates) sheet.getRange(i + 1, 7).setValue(updates.lineUserId || '');
       return true;
     }
   }
@@ -300,6 +302,48 @@ function callCustomer(id) {
   }
 
   return { ok: true, calledAt: calledAt };
+}
+
+// ── linkLine ─────────────────────────────────────────────
+// 店頭キオスクで発券した整理券（LINE 未連携）に、整理券の QR から開いた
+// お客様の LINE を後から紐づける。以後の呼び出し通知が LINE に届く。
+function linkLine(params) {
+  var id  = String(params.id || '').trim();
+  var uid = String(params.lineUserId || '').trim();
+  if (!id)  return { error: 'id required' };
+  if (!uid) return { error: 'lineUserId required' };
+  if (!isTodayId(id)) return { error: 'Ticket expired' };
+
+  var q = getAllQueue().find(function(x) { return x.id === id; });
+  if (!q) return { error: 'Ticket not found' };
+  if (q.status !== 'waiting' && q.status !== 'pre' && q.status !== 'called') {
+    return { error: 'Ticket closed', status: q.status };
+  }
+  // 既に別の LINE と連携済みの整理券は乗っ取れないようにする
+  if (q.lineUserId && q.lineUserId !== uid) return { error: 'Already linked to another LINE account' };
+
+  var t = getTicket(id);
+  if (q.lineUserId !== uid) {
+    updateQueueRow(id, { lineUserId: uid });
+    sendLineMessage(
+      uid,
+      (t.status === 'called'
+        ? '🔔 ただいまご案内中です\n\n' +
+          '整理番号：' + id + '\n' +
+          '📍 10分以内にカウンターへお越しください\n'
+        : '🪷 整理券とLINEを連携しました\n\n' +
+          '整理番号：' + id + '\n' +
+          'ご人数：' + t.ppl + '名様\n' +
+          'ご案内予定：' + t.round + ' の回\n' +
+          '前のお客様：' + (t.ahead === 0 ? 'なし（先頭）' : t.ahead + '組') + '\n' +
+          '目安待ち時間：' + (t.waitMin <= 5 ? 'まもなくご案内' : '約 ' + t.waitMin + ' 分') + '\n\n' +
+          'ご案内の際にLINEでお知らせします。\n') +
+      '新丸の内ビルディング 6F\nThe Siam Heritage Tokyo'
+    );
+  }
+  t.ok = true;
+  t.linked = true;
+  return t;
 }
 
 // ── checkinCustomer ──────────────────────────────────────

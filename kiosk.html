@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>整理券発券機 — The Siam Heritage Tokyo</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@400;500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
+<!-- Star webPRNT SDK v1.10.0 (Star Micronics) — 「Star webPRNT Browser」アプリ内で mC-Print2 へ Bluetooth 印刷 -->
+<script src="lib/star/StarWebPrintBuilder.js"></script>
+<script src="lib/star/StarWebPrintTrader.js"></script>
+<!-- QR Code Generator (MIT, Kazuhiko Arase) -->
+<script src="lib/qrcode.js"></script>
+<style>
+:root{
+  --w:#FFFFFF;--ivory:#FAFAF8;--warm:#F5F2ED;--parchment:#EDE8DF;
+  --br-deep:#3D2B1F;--br-mid:#6B4C35;--br-light:#9C7355;--br-pale:#C4A882;
+  --gold:#A8843A;--gold-soft:#C4A055;--gold-dim:rgba(168,132,58,.12);
+  --night:#1C1510;
+  --text:#2A1F17;--text-mid:#6B5545;--text-dim:#A8937E;
+  --border:rgba(107,76,53,.16);
+  --red:#8B3A2F;--red-dim:rgba(139,58,47,.08);
+  --green:#2D6B4A;--green-dim:rgba(45,107,74,.09);
+  --amber:#9C7A1F;
+  --shadow:0 2px 16px rgba(42,31,23,.07);--shadow-md:0 6px 28px rgba(42,31,23,.12);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Noto Sans JP',sans-serif;background:var(--ivory);color:var(--text);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;
+}
+button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer}
+
+/* ── LAYOUT ── */
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column}
+.topbar{
+  flex:0 0 auto;display:flex;align-items:center;gap:14px;
+  padding:14px 28px;background:var(--w);border-bottom:1px solid var(--border);box-shadow:var(--shadow);
+}
+.tb-logo{width:52px;height:52px;border-radius:50%;overflow:hidden;background:#000;flex-shrink:0;border:1px solid var(--border)}
+.tb-logo img{width:100%;height:100%;object-fit:cover;object-position:50% 18%;pointer-events:none}
+.tb-name{flex:1;min-width:0}
+.tb-en{font-family:'Cormorant Garamond',serif;font-size:22px;letter-spacing:3px;color:var(--br-mid);line-height:1.1}
+.tb-jp{font-family:'Noto Serif JP',serif;font-weight:300;font-size:12px;letter-spacing:2px;color:var(--text-dim);margin-top:3px}
+.lang-btn{
+  padding:10px 20px;border:1px solid var(--border);border-radius:40px;background:var(--warm);
+  font-size:16px;letter-spacing:1px;color:var(--br-mid);white-space:nowrap;
+}
+.lang-btn:active{transform:scale(.96)}
+.stage{flex:1 1 auto;position:relative;overflow:hidden}
+.scr{position:absolute;inset:0;display:none;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scr.on{display:flex;animation:scr-in .28s ease}
+@keyframes scr-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.inner{width:100%;max-width:880px;margin:0 auto;padding:36px 36px 28px;flex:1;display:flex;flex-direction:column}
+
+/* step header */
+.step-head{display:flex;align-items:center;gap:14px;margin-bottom:30px}
+.back-btn{
+  display:flex;align-items:center;gap:8px;padding:14px 22px;border:1px solid var(--border);border-radius:40px;
+  background:var(--w);font-size:17px;color:var(--br-mid);flex-shrink:0;box-shadow:var(--shadow);
+}
+.back-btn:active{transform:scale(.96)}
+.dots{flex:1;display:flex;justify-content:center;gap:10px}
+.dot{width:12px;height:12px;border-radius:50%;background:var(--parchment);transition:all .2s}
+.dot.on{background:var(--gold);width:32px;border-radius:6px}
+.dot.done{background:var(--br-pale)}
+.restart-btn{padding:14px 20px;font-size:15px;color:var(--text-dim);flex-shrink:0}
+.q-title{
+  font-family:'Noto Serif JP',serif;font-weight:500;font-size:clamp(26px,3.6vw,38px);
+  color:var(--br-deep);letter-spacing:3px;text-align:center;margin-bottom:10px;line-height:1.4;
+}
+.q-sub{text-align:center;font-size:17px;color:var(--text-dim);letter-spacing:1px;margin-bottom:30px}
+
+/* ── WELCOME ── */
+#s-welcome{background:radial-gradient(ellipse at 50% 30%,#3A2A1C 0%,var(--night) 70%);color:#F3EAD8}
+#s-welcome .inner{align-items:center;justify-content:center;text-align:center;gap:10px}
+.w-logo{height:min(36vh,440px);width:auto;mix-blend-mode:screen;margin-bottom:4px;-webkit-user-drag:none}
+.w-title{font-family:'Noto Serif JP',serif;font-weight:300;font-size:clamp(30px,4.4vw,46px);letter-spacing:10px;color:var(--gold-soft)}
+.w-sub{font-size:clamp(16px,2vw,20px);letter-spacing:2px;color:rgba(243,234,216,.72);line-height:1.8;margin-bottom:22px}
+.start-btn{
+  width:min(100%,620px);padding:34px 20px;border-radius:14px;
+  background:linear-gradient(135deg,#B8923F,#8E6B2A);color:#FFF8EA;
+  font-size:clamp(24px,3.2vw,34px);font-weight:500;letter-spacing:4px;
+  box-shadow:0 10px 36px rgba(168,132,58,.35),inset 0 1px 0 rgba(255,255,255,.25);
+  animation:pulse 2.6s ease-in-out infinite;
+}
+.start-btn small{display:block;font-size:.55em;letter-spacing:2px;opacity:.85;margin-top:6px;font-weight:400}
+.start-btn:active{transform:scale(.98)}
+.start-btn:disabled{background:#5B4A3A;color:rgba(255,248,234,.6);box-shadow:none;animation:none}
+@keyframes pulse{0%,100%{box-shadow:0 10px 36px rgba(168,132,58,.28)}50%{box-shadow:0 10px 48px rgba(168,132,58,.55)}}
+.w-status{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;margin-top:26px}
+.w-chip{
+  padding:12px 22px;border-radius:40px;border:1px solid rgba(196,160,85,.3);background:rgba(255,255,255,.04);
+  font-size:16px;letter-spacing:1px;color:rgba(243,234,216,.85);
+}
+.w-chip b{color:var(--gold-soft);font-size:1.25em;margin:0 3px}
+.w-notice{margin-top:18px;font-size:18px;color:#E8B4A8;letter-spacing:1px;line-height:1.7;max-width:620px}
+.w-lang{position:absolute;top:22px;right:26px;background:rgba(255,255,255,.08);border-color:rgba(196,160,85,.35);color:#F3EAD8}
+.w-hold{position:absolute;top:0;left:0;width:120px;height:120px}
+
+/* ── BIG OPTION BUTTONS ── */
+.grid{display:grid;gap:16px}
+.g-ppl{grid-template-columns:repeat(4,1fr)}
+.opt{
+  background:var(--w);border:2px solid var(--border);border-radius:14px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  padding:22px 12px;min-height:118px;transition:transform .08s,border-color .15s,background .15s;
+}
+.opt:active{transform:scale(.97)}
+.opt.sel{border-color:var(--br-mid);background:rgba(107,76,53,.07)}
+.opt .num{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:52px;color:var(--br-mid);line-height:1}
+.opt .unit{font-size:15px;color:var(--text-dim);letter-spacing:1px}
+.opt .ic{font-size:54px;line-height:1}
+.opt .nm{font-family:'Noto Serif JP',serif;font-weight:500;font-size:26px;color:var(--br-deep);letter-spacing:3px}
+.opt .ds{font-size:16px;color:var(--text-dim);letter-spacing:1px}
+.opt.wide{grid-column:span 4;flex-direction:row;min-height:84px;gap:14px}
+.opt.wide .nm{font-size:22px}
+.g-style{grid-template-columns:1fr 1fr}
+.g-style .opt{min-height:260px;gap:12px}
+.g-wc{grid-template-columns:repeat(4,1fr)}
+.g-wc .opt{min-height:140px}
+.g-wc .nm{font-size:24px}
+
+.stepper{display:none;align-items:center;justify-content:center;gap:26px;margin-top:24px}
+.stepper.on{display:flex}
+.st-btn{width:88px;height:88px;border-radius:50%;background:var(--w);border:2px solid var(--border);font-size:40px;color:var(--br-mid);box-shadow:var(--shadow)}
+.st-btn:active{transform:scale(.94)}
+.st-val{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:72px;color:var(--br-mid);min-width:120px;text-align:center}
+.st-val small{font-family:'Noto Sans JP',sans-serif;font-size:18px;color:var(--text-dim);margin-left:6px}
+
+/* rounds */
+.rounds{display:flex;flex-direction:column;gap:14px}
+.round{
+  display:flex;align-items:center;gap:18px;padding:24px 28px;background:var(--w);
+  border:2px solid var(--border);border-radius:14px;box-shadow:var(--shadow);text-align:left;width:100%;
+}
+.round:active{transform:scale(.99)}
+.round .r-time{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:44px;color:var(--br-mid);min-width:170px}
+.round .r-time small{font-family:'Noto Serif JP',serif;font-weight:400;font-size:17px;color:var(--text-dim);margin-left:6px;letter-spacing:1px}
+.round .r-info{flex:1;font-size:17px;color:var(--text-mid);line-height:1.6}
+.badge{padding:9px 18px;border-radius:30px;font-size:16px;font-weight:500;letter-spacing:1px;white-space:nowrap}
+.b-free{background:var(--green-dim);color:var(--green)}
+.b-lim{background:rgba(156,122,31,.12);color:var(--amber)}
+.b-full{background:var(--red-dim);color:var(--red)}
+.round.full{opacity:.45;pointer-events:none}
+.empty-note{text-align:center;padding:40px 20px;color:var(--text-mid);font-size:19px;line-height:1.8}
+
+/* confirm */
+.summary{background:var(--w);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-md);overflow:hidden;margin-bottom:28px}
+.sum-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 30px;border-bottom:1px solid var(--border)}
+.sum-row:last-child{border-bottom:0}
+.sum-l{font-size:18px;color:var(--text-dim);letter-spacing:1px}
+.sum-v{font-family:'Noto Serif JP',serif;font-weight:500;font-size:26px;color:var(--br-deep);letter-spacing:2px;text-align:right}
+.primary{
+  width:100%;padding:30px 20px;border-radius:14px;background:var(--br-mid);color:var(--ivory);
+  font-size:clamp(22px,3vw,30px);font-weight:500;letter-spacing:4px;box-shadow:var(--shadow-md);
+}
+.primary:active{transform:scale(.99);background:var(--br-deep)}
+.primary:disabled{background:var(--br-pale)}
+.secondary{
+  width:100%;padding:20px;border-radius:14px;margin-top:14px;background:var(--w);border:1px solid var(--border);
+  font-size:19px;letter-spacing:2px;color:var(--br-mid);
+}
+.spacer{flex:1}
+
+/* issuing */
+#s-issuing .inner{align-items:center;justify-content:center;gap:28px}
+.spinner{width:84px;height:84px;border-radius:50%;border:6px solid var(--parchment);border-top-color:var(--gold);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.big-msg{font-family:'Noto Serif JP',serif;font-size:30px;letter-spacing:4px;color:var(--br-mid);text-align:center}
+
+/* done */
+#s-done .inner{align-items:center;text-align:center}
+.d-title{font-family:'Noto Serif JP',serif;font-weight:500;font-size:28px;letter-spacing:4px;color:var(--br-mid);margin-bottom:18px}
+.d-ticket{
+  width:100%;max-width:720px;background:var(--w);border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow-md);padding:26px 30px;position:relative;overflow:hidden;
+}
+.d-ticket::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(to right,var(--br-mid),var(--gold),var(--br-pale),var(--gold),var(--br-mid))}
+.d-lbl{font-size:16px;letter-spacing:6px;color:var(--text-dim)}
+.d-num{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(64px,10vw,104px);color:var(--br-mid);letter-spacing:4px;line-height:1.1;margin:4px 0 14px}
+.d-meta{display:flex;justify-content:center;gap:34px;flex-wrap:wrap;font-size:18px;color:var(--text-mid);padding-top:14px;border-top:1px dashed var(--border)}
+.d-meta b{font-family:'Noto Serif JP',serif;font-weight:500;font-size:24px;color:var(--br-deep);margin-left:8px}
+.print-state{margin:18px 0 6px;padding:14px 20px;border-radius:12px;font-size:19px;letter-spacing:1px;line-height:1.6;max-width:720px;width:100%}
+.ps-busy{background:var(--gold-dim);color:var(--br-mid)}
+.ps-ok{background:var(--green-dim);color:var(--green)}
+.ps-err{background:var(--red-dim);color:var(--red)}
+.ps-none{background:var(--warm);color:var(--text-mid)}
+.d-line{display:flex;align-items:center;gap:22px;text-align:left;max-width:720px;width:100%;margin-top:12px;padding:18px 22px;background:var(--w);border:1px solid var(--border);border-radius:14px}
+.d-line img{width:150px;height:150px;image-rendering:pixelated;flex-shrink:0}
+.d-line .lt{font-family:'Noto Serif JP',serif;font-weight:500;font-size:21px;color:#06A34A;letter-spacing:1px;margin-bottom:6px}
+.d-line .ld{font-size:16px;color:var(--text-mid);line-height:1.7}
+.d-tv{font-size:16px;color:var(--text-dim);margin:14px 0 18px;letter-spacing:1px}
+.d-foot{width:100%;max-width:720px}
+.countdown{font-size:15px;color:var(--text-dim);margin-top:10px}
+
+/* error */
+#s-error .inner{align-items:center;justify-content:center;text-align:center;gap:16px}
+.err-ic{font-size:72px}
+.err-t{font-family:'Noto Serif JP',serif;font-size:30px;color:var(--red);letter-spacing:3px}
+.err-d{font-size:19px;color:var(--text-mid);line-height:1.8;margin-bottom:18px}
+#s-error .primary,#s-error .secondary{max-width:560px}
+
+/* ── STAFF MENU ── */
+.overlay{position:fixed;inset:0;background:rgba(28,21,16,.62);display:none;align-items:center;justify-content:center;z-index:100;padding:24px}
+.overlay.on{display:flex}
+.panel{background:var(--w);border-radius:16px;box-shadow:var(--shadow-md);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;padding:26px}
+.p-title{font-family:'Noto Serif JP',serif;font-size:22px;color:var(--br-mid);letter-spacing:2px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.p-close{font-size:28px;color:var(--text-dim);padding:4px 10px}
+.pin-dots{display:flex;justify-content:center;gap:16px;margin:10px 0 20px}
+.pin-dots span{width:18px;height:18px;border-radius:50%;border:2px solid var(--br-pale)}
+.pin-dots span.f{background:var(--br-mid);border-color:var(--br-mid)}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.pin-pad button{padding:20px;font-size:28px;border-radius:12px;background:var(--warm);border:1px solid var(--border);color:var(--br-deep)}
+.pin-pad button:active{background:var(--parchment)}
+.pin-err{text-align:center;color:var(--red);min-height:22px;margin-top:10px;font-size:15px}
+.p-sec{border-top:1px solid var(--border);padding:16px 0}
+.p-sec:first-of-type{border-top:0;padding-top:0}
+.p-lbl{font-size:13px;letter-spacing:2px;color:var(--text-dim);margin-bottom:8px}
+.p-stat{font-size:16px;line-height:1.7;color:var(--text)}
+.p-stat.bad{color:var(--red)}.p-stat.good{color:var(--green)}
+.p-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.p-btn{padding:16px 10px;border-radius:10px;background:var(--br-mid);color:var(--ivory);font-size:16px;letter-spacing:1px}
+.p-btn.alt{background:var(--warm);color:var(--br-mid);border:1px solid var(--border)}
+.p-btn:disabled{opacity:.45}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;font-size:16px}
+.tg{width:62px;height:34px;border-radius:17px;background:var(--parchment);position:relative;transition:background .2s}
+.tg::after{content:'';position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:left .2s}
+.tg.on{background:var(--green)}.tg.on::after{left:31px}
+.preview{margin-top:12px;text-align:center;background:var(--warm);border-radius:10px;padding:12px}
+.preview img{max-width:100%;width:240px;border:1px solid var(--border);background:#fff}
+.p-ver{font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px}
+
+/* staff alert (printer problem) — only a small bar for staff */
+.staff-alert{position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--red);color:#fff;text-align:center;padding:10px 16px;font-size:15px;letter-spacing:1px;display:none}
+.staff-alert.on{display:block}
+
+@media (max-width:700px){
+  .inner{padding:24px 18px}
+  .g-ppl,.g-wc{grid-template-columns:repeat(2,1fr)}
+  .opt.wide{grid-column:span 2}
+  .g-style .opt{min-height:180px}
+}
+@media (orientation:landscape) and (max-height:900px){
+  .inner{padding-top:22px}
+  .step-head{margin-bottom:18px}
+  .q-sub{margin-bottom:18px}
+  .opt{min-height:100px}
+  .g-style .opt{min-height:200px}
+  .w-logo{height:30vh}
+  .w-sub{margin-bottom:14px}
+  .start-btn{padding:26px 20px}
+  .w-status{margin-top:16px}
+  .d-title{margin-bottom:10px}
+  .d-ticket{padding:18px 26px}
+  .d-num{font-size:76px;margin:0 0 8px}
+  .print-state{margin:12px 0 4px;padding:10px 18px}
+  .d-line{margin-top:8px;padding:12px 18px}
+  .d-line img{width:112px;height:112px}
+  .d-tv{margin:10px 0 12px}
+  .primary{padding:22px 20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOP BAR (hidden on welcome) -->
+  <div class="topbar" id="topbar" style="display:none">
+    <div class="tb-logo" id="tb-logo"><img src="lib/logo.jpg" alt=""></div>
+    <div class="tb-name">
+      <div class="tb-en">THE SIAM HERITAGE</div>
+      <div class="tb-jp" data-i18n="tagline"></div>
+    </div>
+    <button class="lang-btn" onclick="toggleLang()" data-i18n="lang_switch"></button>
+  </div>
+
+  <div class="stage">
+
+    <!-- ═══ WELCOME ═══ -->
+    <section class="scr on" id="s-welcome">
+      <div class="w-hold" id="w-hold"></div>
+      <button class="lang-btn w-lang" onclick="toggleLang()" data-i18n="lang_switch"></button>
+      <div class="inner">
+        <img class="w-logo" id="w-logo" src="lib/logo.jpg" alt="The Siam Heritage" draggable="false">
+        <div class="w-title" data-i18n="welcome"></div>
+        <div class="w-sub" data-i18n-html="welcome_sub"></div>
+        <button class="start-btn" id="start-btn" onclick="startFlow()"><span data-i18n="start"></span><small data-i18n="start_sub"></small></button>
+        <div class="w-status" id="w-status"></div>
+        <div class="w-notice" id="w-notice"></div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 1: PEOPLE ═══ -->
+    <section class="scr" id="s-ppl">
+      <div class="inner">
+        <div class="step-head">
+          <button class="back-btn" onclick="goBack()">← <span data-i18n="back"></span></button>
+          <div class="dots" data-step="1"></div>
+          <button class="restart-btn" onclick="resetKiosk()" data-i18n="restart"></button>
+        </div>
+        <div class="q-title" data-i18n="q_ppl"></div>
+        <div class="q-sub" data-i18n="q_ppl_sub"></div>
+        <div class="grid g-ppl" id="g-ppl"></div>
+        <div class="stepper" id="stepper">
+          <button class="st-btn" onclick="stepPpl(-1)">−</button>
+          <div class="st-val"><span id="st-val">9</span><small data-i18n="unit_ppl"></small></div>
+          <button class="st-btn" onclick="stepPpl(1)">＋</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="primary" id="ppl-next" style="display:none;margin-top:24px" onclick="confirmMore()" data-i18n="next"></button>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 2: STYLE ═══ -->
+    <section class="scr" id="s-style">
+      <div class="inner">
+        <div class="step-head">
+          <button class="back-btn" onclick="goBack()">← <span data-i18n="back"></span></button>
+          <div class="dots" data-step="2"></div>
+          <button class="restart-btn" onclick="resetKiosk()" data-i18n="restart"></button>
+        </div>
+        <div class="q-title" data-i18n="q_style"></div>
+        <div class="q-sub">&nbsp;</div>
+        <div class="grid g-style">
+          <button class="opt" data-style="buffet" onclick="pickStyle('buffet')">
+            <div class="ic">🍱</div><div class="nm" data-i18n="buffet"></div><div class="ds" data-i18n="buffet_desc"></div>
+          </button>
+          <button class="opt" data-style="alacarte" onclick="pickStyle('alacarte')">
+            <div class="ic">🍽</div><div class="nm" data-i18n="alacarte"></div><div class="ds" data-i18n="alacarte_desc"></div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 3: WHEELCHAIR / STROLLER ═══ -->
+    <section class="scr" id="s-wc">
+      <div class="inner">
+        <div class="step-head">
+          <button class="back-btn" onclick="goBack()">← <span data-i18n="back"></span></button>
+          <div class="dots" data-step="3"></div>
+          <button class="restart-btn" onclick="resetKiosk()" data-i18n="restart"></button>
+        </div>
+        <div class="q-title" data-i18n="q_wc"></div>
+        <div class="q-sub" data-i18n="q_wc_sub"></div>
+        <div class="grid g-wc" id="g-wc"></div>
+      </div>
+    </section>
+
+    <!-- ═══ STEP 4: ROUND ═══ -->
+    <section class="scr" id="s-round">
+      <div class="inner">
+        <div class="step-head">
+          <button class="back-btn" onclick="goBack()">← <span data-i18n="back"></span></button>
+          <div class="dots" data-step="4"></div>
+          <button class="restart-btn" onclick="resetKiosk()" data-i18n="restart"></button>
+        </div>
+        <div class="q-title" data-i18n="q_round"></div>
+        <div class="q-sub" data-i18n="q_round_sub"></div>
+        <div class="rounds" id="rounds"></div>
+      </div>
+    </section>
+
+    <!-- ═══ CONFIRM ═══ -->
+    <section class="scr" id="s-confirm">
+      <div class="inner">
+        <div class="step-head">
+          <button class="back-btn" onclick="goBack()">← <span data-i18n="back"></span></button>
+          <div class="dots" data-step="5"></div>
+          <button class="restart-btn" onclick="resetKiosk()" data-i18n="restart"></button>
+        </div>
+        <div class="q-title" data-i18n="q_confirm"></div>
+        <div class="q-sub">&nbsp;</div>
+        <div class="summary" id="summary"></div>
+        <div class="spacer"></div>
+        <button class="primary" id="issue-btn" onclick="issueTicket()" data-i18n="issue"></button>
+      </div>
+    </section>
+
+    <!-- ═══ ISSUING ═══ -->
+    <section class="scr" id="s-issuing">
+      <div class="inner">
+        <div class="spinner"></div>
+        <div class="big-msg" data-i18n="issuing"></div>
+      </div>
+    </section>
+
+    <!-- ═══ DONE ═══ -->
+    <section class="scr" id="s-done">
+      <div class="inner">
+        <div class="d-title" data-i18n="done_title"></div>
+        <div class="d-ticket">
+          <div class="d-lbl" data-i18n="your_no"></div>
+          <div class="d-num" id="d-num">—</div>
+          <div class="d-meta" id="d-meta"></div>
+        </div>
+        <div class="print-state" id="print-state"></div>
+        <div class="d-line">
+          <img id="d-qr" alt="LINE QR">
+          <div>
+            <div class="lt" data-i18n="line_title"></div>
+            <div class="ld" data-i18n="line_desc"></div>
+          </div>
+        </div>
+        <div class="d-tv" data-i18n="tv_note"></div>
+        <div class="spacer"></div>
+        <div class="d-foot">
+          <button class="primary" onclick="resetKiosk()" data-i18n="done_btn"></button>
+          <div class="countdown" id="countdown"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ ERROR ═══ -->
+    <section class="scr" id="s-error">
+      <div class="inner">
+        <div class="err-ic">🙇</div>
+        <div class="err-t" data-i18n="err_title"></div>
+        <div class="err-d" data-i18n="err_desc"></div>
+        <button class="primary" onclick="issueTicket()" data-i18n="retry"></button>
+        <button class="secondary" onclick="resetKiosk()" data-i18n="restart"></button>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div class="staff-alert" id="staff-alert"></div>
+
+<!-- ═══ STAFF: PIN ═══ -->
+<div class="overlay" id="pin-ov">
+  <div class="panel" style="max-width:380px">
+    <div class="p-title">スタッフメニュー <button class="p-close" onclick="closePin()">×</button></div>
+    <div style="text-align:center;font-size:15px;color:var(--text-dim)">暗証番号を入力してください</div>
+    <div class="pin-dots" id="pin-dots"><span></span><span></span><span></span><span></span></div>
+    <div class="pin-pad" id="pin-pad"></div>
+    <div class="pin-err" id="pin-err"></div>
+  </div>
+</div>
+
+<!-- ═══ STAFF: MENU ═══ -->
+<div class="overlay" id="staff-ov">
+  <div class="panel">
+    <div class="p-title">🖨 スタッフメニュー <button class="p-close" onclick="closeStaff()">×</button></div>
+    <div class="p-sec">
+      <div class="p-lbl">プリンター</div>
+      <div class="p-stat" id="p-env"></div>
+      <div class="p-stat" id="p-last" style="margin-top:6px"></div>
+    </div>
+    <div class="p-sec">
+      <div class="p-btns">
+        <button class="p-btn" id="p-test" onclick="staffTestPrint()">テスト印刷</button>
+        <button class="p-btn" id="p-reprint" onclick="staffReprint()">最後の整理券を再印刷</button>
+        <button class="p-btn alt" onclick="staffPreview()">印刷プレビュー</button>
+        <button class="p-btn alt" onclick="location.reload()">画面を再読み込み</button>
+      </div>
+      <div class="preview" id="p-preview" style="display:none"><img id="p-preview-img" alt=""></div>
+    </div>
+    <div class="p-sec">
+      <div class="p-lbl">設定</div>
+      <div class="toggle-row"><span>発券時に自動で印刷する</span><button class="tg" id="tg-auto" onclick="toggleSetting('autoPrint')"></button></div>
+      <div class="toggle-row"><span>印刷後に用紙をカットする</span><button class="tg" id="tg-cut" onclick="toggleSetting('cut')"></button></div>
+    </div>
+    <div class="p-ver" id="p-ver"></div>
+  </div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════╗
+// ║        SETUP — ここを設定してください              ║
+// ╚══════════════════════════════════════════════════╝
+const CONFIG = {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzWjYWC8Rvb05lHQ2GhYypNTVtezdc4V031-k_zn0DrLm-WGgV6iIB1aLSMxFrxucE1Yw/exec',   // Google Apps Script デプロイ URL
+  LIFF_ID: '2009236977-HNXaG3GD',   // LINE LIFF ID（整理券の QR から LINE 連携に使用）
+  STAFF_PIN: '1234',                // スタッフメニューの暗証番号（ロゴを3秒長押しで表示）
+  PAPER_DOTS: 384,                  // 印刷幅（mC-Print2 58mm = 384 ドット）
+  IDLE_SEC: 60,                     // 操作途中で放置されたら最初の画面に戻るまでの秒数
+  DONE_SEC: 25,                     // 発券完了画面から自動で戻るまでの秒数
+};
+// ════════════════════════════════════════════════════
+const VERSION = 'kiosk 1.0';
+
+// ── i18n ─────────────────────────────────────────────
+const T = {
+  ja:{
+    lang_switch:'English', tagline:'TOKYO · 新丸の内ビルディング 6F',
+    welcome:'ようこそ', welcome_sub:'ウォークインのお客様は<br>こちらで整理券をお取りください',
+    start:'タッチして整理券を発券', start_sub:'Tap here to get a queue ticket',
+    waiting:'ただいまお待ち', groups:'{n} 組',
+    full_all:'ただいま満席のため、整理券の発券を停止しております。<br>恐れ入りますがスタッフにお声がけください。',
+    offline:'ただいま発券できません。スタッフにお声がけください。',
+    back:'戻る', restart:'最初から', next:'次へ',
+    q_ppl:'ご人数をお選びください', q_ppl_sub:'お子様も含めた人数をお選びください', unit_ppl:'名',
+    more:'9名以上', more_ds:'人数を入力',
+    q_style:'ご利用スタイルをお選びください',
+    buffet:'ブッフェ', buffet_desc:'タイ料理 食べ放題 90分', alacarte:'アラカルト', alacarte_desc:'メニューから単品でご注文',
+    q_wc:'車椅子・ベビーカーはご利用ですか？', q_wc_sub:'お席のご用意の参考にさせていただきます',
+    wc_none:'なし', wc_n:'{n}台', wc_3:'3台以上',
+    q_round:'ご希望の回をお選びください', q_round_sub:'満席の回はお選びいただけません',
+    round_suffix:'の回', st_free:'空きあり', st_lim:'残りわずか', st_full:'満席',
+    until:'開始まで 約 {n} 分', now_seating:'ご案内中', in_round:'お待ち {n} 組',
+    no_rounds:'ただいまご案内できる回がございません。<br>スタッフにお声がけください。',
+    q_confirm:'内容をご確認ください',
+    l_ppl:'ご人数', l_style:'ご利用', l_wc:'車椅子・ベビーカー', l_round:'ご希望の回',
+    v_ppl:'{n} 名様', v_round:'{t} の回',
+    issue:'整理券を発券する', issuing:'発券しています…',
+    done_title:'整理券を発券しました', your_no:'整 理 番 号',
+    ahead:'前のお客様', est:'目安待ち時間', soon:'まもなくご案内', about:'約 {n} 分',
+    printing:'🖨 整理券を印刷しています…', printed:'✓ 下の取り出し口から整理券をお取りください',
+    print_fail:'整理券を印刷できませんでした。この番号をお控えいただくか、スタッフにお声がけください。',
+    no_printer:'📷 この番号をお控えください（写真を撮っていただいても結構です）',
+    line_title:'LINEで呼び出し通知を受け取る', line_desc:'スマートフォンでQRコードを読み取ると、ご案内の際にLINEでお知らせします。（整理券にも印刷されています）',
+    tv_note:'店頭モニターでも番号をお呼びします。お呼び出し後 10分以内にお越しください。',
+    done_btn:'完了', auto_return:'{n} 秒後に最初の画面に戻ります',
+    err_title:'発券できませんでした', err_desc:'通信エラーが発生しました。<br>もう一度お試しいただくか、スタッフにお声がけください。', retry:'もう一度試す',
+  },
+  en:{
+    lang_switch:'日本語', tagline:'TOKYO · Shin-Marunouchi Bldg. 6F',
+    welcome:'Welcome', welcome_sub:'Walk-in guests,<br>please take a queue ticket here',
+    start:'Tap to get your ticket', start_sub:'タッチして整理券を発券',
+    waiting:'Groups waiting', groups:'{n}',
+    full_all:'We are fully booked at the moment and have paused ticketing.<br>Please ask our staff.',
+    offline:'Ticketing is unavailable right now. Please ask our staff.',
+    back:'Back', restart:'Start over', next:'Next',
+    q_ppl:'How many guests?', q_ppl_sub:'Please include children', unit_ppl:'',
+    more:'9 or more', more_ds:'Enter the number',
+    q_style:'Choose your dining style',
+    buffet:'Buffet', buffet_desc:'All-you-can-eat Thai · 90 min', alacarte:'À la carte', alacarte_desc:'Order from the menu',
+    q_wc:'Any wheelchairs or strollers?', q_wc_sub:'This helps us prepare your table',
+    wc_none:'None', wc_n:'{n}', wc_3:'3 or more',
+    q_round:'Choose your seating time', q_round_sub:'Fully booked times cannot be selected',
+    round_suffix:'', st_free:'Available', st_lim:'Few left', st_full:'Full',
+    until:'Starts in about {n} min', now_seating:'Now seating', in_round:'{n} waiting',
+    no_rounds:'No seating times are available right now.<br>Please ask our staff.',
+    q_confirm:'Please confirm',
+    l_ppl:'Guests', l_style:'Style', l_wc:'Wheelchair / stroller', l_round:'Seating time',
+    v_ppl:'{n} guests', v_round:'{t}',
+    issue:'Get my ticket', issuing:'Issuing your ticket…',
+    done_title:'Here is your ticket', your_no:'YOUR NUMBER',
+    ahead:'Groups ahead', est:'Estimated wait', soon:'Very soon', about:'About {n} min',
+    printing:'🖨 Printing your ticket…', printed:'✓ Please take your printed ticket below',
+    print_fail:'We could not print your ticket. Please note this number or ask our staff.',
+    no_printer:'📷 Please note this number (feel free to take a photo)',
+    line_title:'Get notified on LINE', line_desc:'Scan this QR code with your phone and we will message you on LINE when your table is ready. (It is also printed on your ticket.)',
+    tv_note:'Your number will also be called on the screen. Please come back within 10 minutes of being called.',
+    done_btn:'Done', auto_return:'Returning to the start screen in {n}s',
+    err_title:'Sorry, something went wrong', err_desc:'We could not issue your ticket.<br>Please try again or ask our staff.', retry:'Try again',
+  },
+};
+let lang='ja';
+function t(key,vars){
+  let s=(T[lang]&&T[lang][key]!=null)?T[lang][key]:(T.ja[key]||key);
+  if(vars) for(const k in vars) s=s.replace('{'+k+'}',vars[k]);
+  return s;
+}
+function applyLang(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{ el.textContent=t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-html]').forEach(el=>{ el.innerHTML=t(el.dataset.i18nHtml); });
+  renderPplGrid(); renderWcGrid(); renderWelcomeStatus(); renderRounds();
+  if(current==='s-confirm') renderSummary();
+  if(current==='s-done'&&lastTicket) renderDone(false);
+}
+function toggleLang(){ lang=lang==='ja'?'en':'ja'; applyLang(); }
+function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ── SETTINGS (per-device, localStorage) ──────────────
+const settings={autoPrint:true,cut:true};
+try{ Object.assign(settings,JSON.parse(localStorage.getItem('kioskSettings')||'{}')); }catch(e){}
+function saveSettings(){ try{ localStorage.setItem('kioskSettings',JSON.stringify(settings)); }catch(e){} }
+
+// ── STATE ────────────────────────────────────────────
+const sel={ppl:0,style:'',wc:0,round:''};
+let current='s-welcome', history_=[];
+let seats=[], queue=[], dashOk=false, dashLoaded=false;
+let lastTicket=null, issuing=false;
+
+// ── HELPERS (ported from index.html) ─────────────────
+function fmtTime(v){
+  if(!v||v==='null'||v==='undefined') return '--';
+  const s=String(v).trim();
+  if(/^\d{1,2}:\d{2}([-–]\d{2})?$/.test(s)) return s;
+  try{ const d=new Date(s); if(!isNaN(d)) return d.toTimeString().slice(0,5); }catch(e){}
+  return s;
+}
+function nowMinutes(){ const n=new Date(); return n.getHours()*60+n.getMinutes(); }
+function parseRoundMin(r){ const m=String(r).match(/^(\d{1,2}):(\d{2})/); return m?parseInt(m[1])*60+parseInt(m[2]):0; }
+function todayTag(){ const n=new Date(); return String(n.getMonth()+1).padStart(2,'0')+String(n.getDate()).padStart(2,'0'); }
+function hhmm(d){ return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+
+async function api(params,timeoutMs){
+  const ctrl=new AbortController();
+  const tm=setTimeout(()=>ctrl.abort(),timeoutMs||20000);
+  try{
+    const r=await fetch(CONFIG.GAS_URL+'?'+new URLSearchParams(params),{signal:ctrl.signal});
+    return await r.json();
+  }finally{ clearTimeout(tm); }
+}
+
+// ── DASHBOARD DATA ───────────────────────────────────
+async function loadDashboard(){
+  try{
+    const d=await api({action:'getDashboard'},15000);
+    if(!d||d.error||!Array.isArray(d.seats)) throw new Error(d&&d.error||'bad response');
+    const tag='W-'+todayTag()+'-';
+    seats=d.seats.map(s=>({t:fmtTime(s.t||s.time||''),s:s.s||s.status||'free'})).filter(s=>s.t&&s.t!=='--');
+    queue=(d.q||[]).filter(q=>String(q.id).startsWith(tag));
+    dashOk=true;
+  }catch(e){ dashOk=false; }
+  dashLoaded=true;
+  renderWelcomeStatus();
+  if(current==='s-round') renderRounds();
+}
+function waitingGroups(round){
+  return queue.filter(q=>(q.status==='waiting'||q.status==='pre')&&(!round||q.round===round)).length;
+}
+function availableSeats(){ return seats.filter(s=>s.s!=='full'); }
+
+function renderWelcomeStatus(){
+  const st=document.getElementById('w-status'), nt=document.getElementById('w-notice'), btn=document.getElementById('start-btn');
+  if(!st) return;
+  if(!dashLoaded){ st.innerHTML=''; nt.innerHTML=''; btn.disabled=false; return; }
+  if(!dashOk&&!seats.length){
+    st.innerHTML=''; nt.innerHTML=t('offline'); btn.disabled=true; return;
+  }
+  const avail=availableSeats();
+  st.innerHTML=`<div class="w-chip">${esc(t('waiting'))}<b>${waitingGroups()}</b>${lang==='ja'?'組':'groups'}</div>`+
+    seats.map(s=>`<div class="w-chip">${esc(s.t)} · ${esc(t('st_'+s.s))}</div>`).join('');
+  if(!avail.length){ nt.innerHTML=t('full_all'); btn.disabled=true; }
+  else { nt.innerHTML=''; btn.disabled=false; }
+}
+
+// ── NAVIGATION ───────────────────────────────────────
+const STEPS=['s-ppl','s-style','s-wc','s-round','s-confirm'];
+function show(id,push){
+  if(push!==false&&current!==id&&STEPS.includes(current)) history_.push(current);
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  current=id;
+  document.getElementById('topbar').style.display=(id==='s-welcome')?'none':'flex';
+  renderDots();
+  touch();
+}
+function goBack(){
+  const prev=history_.pop();
+  if(prev) show(prev,false); else resetKiosk();
+}
+function renderDots(){
+  document.querySelectorAll('.dots').forEach(el=>{
+    const step=+el.dataset.step;
+    el.innerHTML=[1,2,3,4,5].map(i=>`<span class="dot${i===step?' on':i<step?' done':''}"></span>`).join('');
+  });
+}
+function startFlow(){
+  sel.ppl=0; sel.style=''; sel.wc=0; sel.round=''; sel._wcPicked=false;
+  history_=[];
+  renderPplGrid(); document.getElementById('stepper').classList.remove('on'); document.getElementById('ppl-next').style.display='none';
+  document.querySelectorAll('[data-style]').forEach(b=>b.classList.remove('sel'));
+  requestWakeLock();
+  show('s-ppl');
+  loadDashboard();
+}
+function resetKiosk(){
+  clearInterval(doneTimer); doneTimer=null;
+  history_=[]; issuing=false;
+  if(lang!=='ja'){ lang='ja'; applyLang(); }
+  show('s-welcome',false);
+  loadDashboard();
+}
+
+// ── STEP 1: PEOPLE ───────────────────────────────────
+function renderPplGrid(){
+  const g=document.getElementById('g-ppl'); if(!g) return;
+  let h='';
+  for(let n=1;n<=8;n++) h+=`<button class="opt${sel.ppl===n?' sel':''}" onclick="pickPpl(${n})"><div class="num">${n}</div><div class="unit">${lang==='ja'?'名':(n===1?'guest':'guests')}</div></button>`;
+  h+=`<button class="opt wide${sel.ppl>8?' sel':''}" onclick="openMore()"><div class="nm">${esc(t('more'))}</div><div class="ds">${esc(t('more_ds'))}</div></button>`;
+  g.innerHTML=h;
+}
+function pickPpl(n){ sel.ppl=n; renderPplGrid(); setTimeout(()=>show('s-style'),140); }
+let moreVal=9;
+function openMore(){
+  moreVal=Math.max(9,sel.ppl||9);
+  document.getElementById('st-val').textContent=moreVal;
+  document.getElementById('stepper').classList.add('on');
+  document.getElementById('ppl-next').style.display='block';
+  touch();
+}
+function stepPpl(d){ moreVal=Math.min(30,Math.max(9,moreVal+d)); document.getElementById('st-val').textContent=moreVal; touch(); }
+function confirmMore(){ sel.ppl=moreVal; renderPplGrid(); show('s-style'); }
+
+// ── STEP 2: STYLE ────────────────────────────────────
+function pickStyle(s){
+  sel.style=s;
+  document.querySelectorAll('[data-style]').forEach(b=>b.classList.toggle('sel',b.dataset.style===s));
+  setTimeout(()=>show('s-wc'),140);
+}
+
+// ── STEP 3: WHEELCHAIR ───────────────────────────────
+function renderWcGrid(){
+  const g=document.getElementById('g-wc'); if(!g) return;
+  const opts=[[0,t('wc_none')],[1,t('wc_n',{n:1})],[2,t('wc_n',{n:2})],[3,t('wc_3')]];
+  g.innerHTML=opts.map(([n,l])=>`<button class="opt${current==='s-wc'&&sel.wc===n&&sel._wcPicked?' sel':''}" onclick="pickWc(${n})"><div class="ic">${n===0?'🙆':'♿'}</div><div class="nm">${esc(l)}</div></button>`).join('');
+}
+function pickWc(n){
+  sel.wc=n; sel._wcPicked=true; renderWcGrid();
+  setTimeout(()=>{ renderRounds(); show('s-round'); },140);
+}
+
+// ── STEP 4: ROUND ────────────────────────────────────
+function renderRounds(){
+  const el=document.getElementById('rounds'); if(!el) return;
+  if(!seats.length){ el.innerHTML=`<div class="empty-note">${dashLoaded?t('no_rounds'):'…'}</div>`; return; }
+  const now=nowMinutes();
+  el.innerHTML=seats.map(s=>{
+    const full=s.s==='full';
+    const until=Math.max(0,parseRoundMin(s.t)-now);
+    const info=full||until>120?'':(until>0?t('until',{n:until}):t('now_seating'));
+    const w=waitingGroups(s.t);
+    const badge=full?'b-full':s.s==='lim'?'b-lim':'b-free';
+    return `<button class="round${full?' full':''}${sel.round===s.t?' sel':''}" ${full?'disabled':''} onclick="pickRound('${esc(s.t)}')">
+      <div class="r-time">${esc(s.t)}<small>${esc(t('round_suffix'))}</small></div>
+      <div class="r-info">${esc(info)}${info&&w?'<br>':''}${w&&!full?esc(t('in_round',{n:w})):''}</div>
+      <span class="badge ${badge}">${esc(t('st_'+s.s))}</span>
+    </button>`;
+  }).join('');
+}
+function pickRound(r){ sel.round=r; renderSummary(); show('s-confirm'); }
+
+// ── CONFIRM ──────────────────────────────────────────
+function styleLabel(s){ return t(s==='alacarte'?'alacarte':'buffet'); }
+function wcLabel(n){ return n===0?t('wc_none'):n>=3?t('wc_3'):t('wc_n',{n}); }
+function renderSummary(){
+  document.getElementById('summary').innerHTML=[
+    [t('l_ppl'),t('v_ppl',{n:sel.ppl})],
+    [t('l_style'),styleLabel(sel.style)],
+    [t('l_wc'),wcLabel(sel.wc)],
+    [t('l_round'),t('v_round',{t:sel.round})],
+  ].map(([l,v])=>`<div class="sum-row"><span class="sum-l">${esc(l)}</span><span class="sum-v">${esc(v)}</span></div>`).join('');
+  document.getElementById('issue-btn').disabled=false;
+}
+
+// ── ISSUE ────────────────────────────────────────────
+async function issueTicket(){
+  if(issuing) return;
+  issuing=true;
+  document.getElementById('issue-btn').disabled=true;
+  show('s-issuing',false);
+  try{
+    const d=await api({
+      action:'register', ppl:sel.ppl, round:sel.round, lineUserId:'',
+      wheelchair:sel.wc, courseType:sel.style||'buffet',
+    },25000);
+    if(!d||d.error||!d.id) throw new Error(d&&d.error||'no id');
+    lastTicket={
+      id:String(d.id), ppl:sel.ppl, round:sel.round, style:sel.style||'buffet', wc:sel.wc,
+      ahead:Number(d.ahead)||0, waitMin:Number(d.waitMin)||0, issuedAt:new Date(), lang,
+    };
+    issuing=false;
+    renderDone(true);
+    show('s-done',false);
+    startDoneCountdown();
+    loadDashboard();
+    if(settings.autoPrint) printTicket(lastTicket);
+    else setPrintState('none');
+  }catch(e){
+    console.warn('register failed',e);
+    issuing=false;
+    show('s-error',false);
+    armErrorReturn();
+  }
+}
+function lineUrl(id){ return 'https://liff.line.me/'+CONFIG.LIFF_ID+'?t='+encodeURIComponent(id); }
+function renderDone(fresh){
+  const tk=lastTicket;
+  document.getElementById('d-num').textContent=tk.id;
+  document.getElementById('d-meta').innerHTML=
+    `<span>${esc(t('l_ppl'))}<b>${esc(t('v_ppl',{n:tk.ppl}))}</b></span>`+
+    `<span>${esc(t('l_round'))}<b>${esc(t('v_round',{t:tk.round}))}</b></span>`+
+    `<span>${esc(t('ahead'))}<b>${esc(lang==='ja'?tk.ahead+' 組':String(tk.ahead))}</b></span>`+
+    `<span>${esc(t('est'))}<b>${esc(tk.waitMin<=5?t('soon'):t('about',{n:tk.waitMin}))}</b></span>`;
+  if(fresh){
+    try{ document.getElementById('d-qr').src=qrDataUrl(lineUrl(tk.id),5); }catch(e){}
+  }
+  if(!fresh) setPrintState(printState);
+}
+let doneTimer=null;
+function startDoneCountdown(){
+  clearInterval(doneTimer);
+  let n=CONFIG.DONE_SEC;
+  const el=document.getElementById('countdown');
+  el.textContent=t('auto_return',{n});
+  doneTimer=setInterval(()=>{
+    n--;
+    if(n<=0){ clearInterval(doneTimer); doneTimer=null; if(current==='s-done') resetKiosk(); return; }
+    el.textContent=t('auto_return',{n});
+  },1000);
+}
+function armErrorReturn(){ setTimeout(()=>{ if(current==='s-error'&&!issuing) resetKiosk(); },45000); }
+
+// ── PRINT STATUS (customer-facing) ───────────────────
+let printState='none';
+function setPrintState(s){
+  printState=s;
+  const el=document.getElementById('print-state');
+  const map={busy:['ps-busy','printing'],ok:['ps-ok','printed'],err:['ps-err','print_fail'],none:['ps-none','no_printer']};
+  const [cls,key]=map[s]||map.none;
+  el.className='print-state '+cls;
+  el.textContent=t(key);
+}
+
+// ════════════════════════════════════════════════════
+//  TICKET RENDERER — 58mm (384 dots) 白黒ラスター
+// ════════════════════════════════════════════════════
+let printLogo=null;
+const printLogoReady=new Promise(res=>{
+  const img=new Image();
+  img.onload=()=>{ printLogo=img; res(); };
+  img.onerror=()=>res();
+  img.src='lib/logo-print.png';
+});
+async function fontsReady(){
+  try{
+    await Promise.all([
+      document.fonts.load('700 40px "Noto Sans JP"','整理番号あ'),
+      document.fonts.load('400 20px "Noto Sans JP"','整理番号あ'),
+    ]);
+  }catch(e){}
+  await printLogoReady;
+}
+function qrMatrix(text){
+  const qr=qrcode(0,'M');
+  qr.addData(text);
+  qr.make();
+  return qr;
+}
+function qrDataUrl(text,cell){
+  const qr=qrMatrix(text);
+  return qr.createDataURL(cell||5,cell||5);
+}
+const FONT='"Noto Sans JP","Hiragino Sans","Hiragino Kaku Gothic ProN",sans-serif';
+function renderTicketCanvas(tk){
+  const W=CONFIG.PAPER_DOTS, M=14;
+  const c=document.createElement('canvas');
+  c.width=W; c.height=2400;
+  const g=c.getContext('2d');
+  g.fillStyle='#fff'; g.fillRect(0,0,W,c.height);
+  g.fillStyle='#000'; g.strokeStyle='#000'; g.textBaseline='alphabetic';
+  let y=10;
+  const font=(sz,wt)=>{ g.font=(wt||400)+' '+sz+'px '+FONT; };
+  const center=(txt,sz,wt,gap)=>{ font(sz,wt); y+=sz; g.textAlign='center'; g.fillText(txt,W/2,y); y+=(gap==null?8:gap); };
+  const rule=(dash)=>{ y+=6; g.lineWidth=2; g.setLineDash(dash?[6,5]:[]); g.beginPath(); g.moveTo(M,y); g.lineTo(W-M,y); g.stroke(); g.setLineDash([]); y+=12; };
+  const row=(ja,en,val)=>{
+    font(20,700); g.textAlign='left'; g.fillText(ja,M,y+22);
+    font(13,400); g.fillText(en,M,y+40);
+    let sz=26; font(sz,700); while(g.measureText(val).width>W-M*2-150&&sz>14){ sz-=2; font(sz,700); }
+    g.textAlign='right'; g.fillText(val,W-M,y+30);
+    y+=50;
+  };
+
+  // logo
+  if(printLogo){
+    const lw=128, lh=Math.round(printLogo.height*lw/printLogo.width);
+    g.drawImage(printLogo,(W-lw)/2,y,lw,lh); y+=lh+6;
+  } else {
+    center('THE SIAM HERITAGE',26,700);
+  }
+  center('TOKYO · 新丸の内ビルディング 6F',15,400,4);
+  const d=tk.issuedAt||new Date();
+  center(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}  ${hhmm(d)}`,15,400,2);
+  rule(false);
+
+  // number
+  center('整 理 番 号',20,700,2);
+  center('YOUR TICKET NUMBER',13,400,0);
+  let sz=80; font(sz,700);
+  while(g.measureText(tk.id).width>W-M*2&&sz>30){ sz-=2; font(sz,700); }
+  y+=sz+2; g.textAlign='center'; g.fillText(tk.id,W/2,y); y+=12;
+  rule(false);
+
+  // details
+  const styleJa=tk.style==='alacarte'?'アラカルト':'ブッフェ', styleEn=tk.style==='alacarte'?'À la carte':'Buffet';
+  row('ご人数','Guests',`${tk.ppl} 名 / ${tk.ppl} pax`);
+  row('ご利用','Style',`${styleJa} ${styleEn}`);
+  row('ご案内予定','Seating time',`${tk.round} の回`);
+  row('前のお客様','Groups ahead',`${tk.ahead} 組`);
+  row('目安待ち時間','Estimated wait',tk.waitMin<=5?'まもなく / Soon':`約 ${tk.waitMin} 分 / min`);
+  if(tk.wc>0) row('車椅子・ベビーカー','Wheelchair / stroller',tk.wc>=3?'3台以上':`${tk.wc} 台`);
+  rule(true);
+
+  // LINE QR
+  y+=4;
+  center('LINEで呼び出し通知を受け取る',19,700,2);
+  center('Scan to get notified on LINE',14,400,8);
+  const qr=qrMatrix(lineUrl(tk.id));
+  const n=qr.getModuleCount(), cell=Math.max(3,Math.floor(210/n)), qs=cell*n;
+  const qx=Math.round((W-qs)/2);
+  for(let r=0;r<n;r++) for(let cc=0;cc<n;cc++) if(qr.isDark(r,cc)) g.fillRect(qx+cc*cell,y+r*cell,cell,cell);
+  y+=qs+8;
+  center('スマートフォンのカメラで読み取ってください',14,400,2);
+  rule(true);
+
+  // footer
+  center('店頭モニターでも番号をお呼びします',16,400,2);
+  center('Your number will also appear on the screen',13,400,8);
+  center('お呼び出し後 10分以内にお越しください',17,700,2);
+  center('Please return within 10 min of being called',13,400,8);
+  y+=14;
+
+  // crop + pure black/white (thermal printers print 1-bit)
+  const H=Math.ceil(y);
+  const out=document.createElement('canvas'); out.width=W; out.height=H;
+  const og=out.getContext('2d');
+  og.drawImage(c,0,0);
+  const img=og.getImageData(0,0,W,H), px=img.data;
+  for(let i=0;i<px.length;i+=4){
+    const lum=px[i]*0.299+px[i+1]*0.587+px[i+2]*0.114;
+    const v=lum<150?0:255;
+    px[i]=px[i+1]=px[i+2]=v; px[i+3]=255;
+  }
+  og.putImageData(img,0,0);
+  return out;
+}
+
+// ════════════════════════════════════════════════════
+//  PRINTER — Star webPRNT (Star webPRNT Browser app → mC-Print2 via Bluetooth)
+// ════════════════════════════════════════════════════
+const Printer={
+  // アプリ内では UA に webPRNTSupportMessageHandler が含まれ、localhost:8001 宛の送信をアプリが受け取りプリンターへ送る
+  inApp:/webPRNTSupportMessageHandler/.test(navigator.userAgent),
+  url:'http://localhost:8001/StarWebPRNT/SendMessage',
+  last:null,   // {ok, msg, at}
+  busy:false,
+  describe(trader,res){
+    const st={traderStatus:res.traderStatus};
+    const p=[];
+    try{
+      if(trader.isCoverOpen(st)) p.push('カバーが開いています');
+      if(trader.isPaperEnd(st)) p.push('用紙切れです');
+      if(trader.isOffLine(st)) p.push('オフライン');
+      if(trader.isAutoCutterError(st)) p.push('カッターエラー');
+      if(trader.isHighTemperatureStop(st)) p.push('高温のため停止中');
+      if(trader.isNonRecoverableError(st)) p.push('復帰不可能エラー');
+    }catch(e){}
+    return p.join('・');
+  },
+  print(canvas){
+    return new Promise(resolve=>{
+      if(!this.inApp) return resolve({ok:false,msg:'webPRNT Browser アプリ外のため印刷できません'});
+      if(typeof StarWebPrintBuilder==='undefined'||typeof StarWebPrintTrader==='undefined')
+        return resolve({ok:false,msg:'Star webPRNT ライブラリを読み込めません'});
+      let done=false;
+      const finish=r=>{ if(done) return; done=true; this.busy=false; this.last={...r,at:new Date()}; resolve(r); };
+      try{
+        this.busy=true;
+        const b=new StarWebPrintBuilder();
+        let req=b.createInitializationElement();
+        req+=b.createBitImageElement({context:canvas.getContext('2d'),x:0,y:0,width:canvas.width,height:canvas.height});
+        req+=settings.cut?b.createCutPaperElement({feed:true,type:'partial'}):b.createFeedElement({line:4});
+        const tr=new StarWebPrintTrader({url:this.url,papertype:'normal',timeout:30000});
+        tr.onReceive=res=>{
+          const ok=String(res.traderSuccess)==='true';
+          const why=this.describe(tr,res);
+          finish({ok, msg: ok?(why?'印刷しました（注意: '+why+'）':'印刷しました'):('印刷エラー: '+(why||('code '+res.traderCode)))});
+        };
+        tr.onError=res=>finish({ok:false,msg:'プリンターと通信できません（'+(res&&res.status)+'）Bluetooth接続とプリンターの電源を確認してください'});
+        tr.onTimeout=()=>finish({ok:false,msg:'プリンターの応答がありません（タイムアウト）'});
+        tr.sendMessage({request:req});
+      }catch(e){ finish({ok:false,msg:'印刷データの作成に失敗: '+e.message}); }
+    });
+  },
+};
+
+async function printTicket(tk){
+  if(!Printer.inApp){ setPrintState('none'); return {ok:false}; }
+  setPrintState('busy');
+  await fontsReady();
+  const canvas=renderTicketCanvas(tk);
+  const r=await Printer.print(canvas);
+  if(lastTicket&&lastTicket.id===tk.id&&current==='s-done') setPrintState(r.ok?'ok':'err');
+  showStaffAlert(r.ok?'':'🖨 '+r.msg+'（ロゴ長押し → スタッフメニューで再印刷できます）');
+  return r;
+}
+function showStaffAlert(msg){
+  const el=document.getElementById('staff-alert');
+  el.textContent=msg; el.classList.toggle('on',!!msg);
+}
+
+// ════════════════════════════════════════════════════
+//  STAFF MENU — ロゴを3秒長押し → 暗証番号
+// ════════════════════════════════════════════════════
+let holdTimer=null;
+function bindHold(el){
+  if(!el) return;
+  const start=e=>{ clearTimeout(holdTimer); holdTimer=setTimeout(openPin,3000); };
+  const stop=()=>clearTimeout(holdTimer);
+  el.addEventListener('pointerdown',start);
+  ['pointerup','pointerleave','pointercancel'].forEach(ev=>el.addEventListener(ev,stop));
+}
+let pin='';
+function openPin(){
+  pin=''; renderPin(); document.getElementById('pin-err').textContent='';
+  const pad=document.getElementById('pin-pad');
+  pad.innerHTML=[1,2,3,4,5,6,7,8,9,'C',0,'⌫'].map(k=>`<button onclick="pinKey('${k}')">${k}</button>`).join('');
+  document.getElementById('pin-ov').classList.add('on');
+}
+function closePin(){ document.getElementById('pin-ov').classList.remove('on'); }
+function renderPin(){ document.querySelectorAll('#pin-dots span').forEach((s,i)=>s.classList.toggle('f',i<pin.length)); }
+function pinKey(k){
+  touch();
+  if(k==='C') pin=''; else if(k==='⌫') pin=pin.slice(0,-1); else if(pin.length<4) pin+=k;
+  renderPin();
+  if(pin.length===4){
+    if(pin===String(CONFIG.STAFF_PIN)){ closePin(); openStaff(); }
+    else { document.getElementById('pin-err').textContent='暗証番号が違います'; pin=''; setTimeout(renderPin,250); }
+  }
+}
+function openStaff(){ renderStaff(); document.getElementById('staff-ov').classList.add('on'); }
+function closeStaff(){ document.getElementById('staff-ov').classList.remove('on'); document.getElementById('p-preview').style.display='none'; }
+function renderStaff(){
+  const env=document.getElementById('p-env');
+  if(Printer.inApp){ env.className='p-stat good'; env.textContent='✓ Star webPRNT Browser で動作中（iPad の設定で選択したプリンターに印刷します）'; }
+  else { env.className='p-stat bad'; env.innerHTML='✕ 通常のブラウザで開いています。印刷するには <b>Star webPRNT Browser</b> アプリでこのページを開いてください（発券は印刷なしで動作します）'; }
+  const last=document.getElementById('p-last');
+  if(Printer.last){ last.className='p-stat '+(Printer.last.ok?'good':'bad'); last.textContent=`最後の印刷 ${hhmm(Printer.last.at)} — ${Printer.last.msg}`; }
+  else { last.className='p-stat'; last.textContent='まだ印刷していません'; }
+  document.getElementById('p-test').disabled=!Printer.inApp;
+  document.getElementById('p-reprint').disabled=!Printer.inApp||!lastTicket;
+  document.getElementById('tg-auto').classList.toggle('on',!!settings.autoPrint);
+  document.getElementById('tg-cut').classList.toggle('on',!!settings.cut);
+  document.getElementById('p-ver').textContent=VERSION+' · '+CONFIG.PAPER_DOTS+' dots · '+(Printer.inApp?'webPRNT':'browser');
+}
+function toggleSetting(k){ settings[k]=!settings[k]; saveSettings(); renderStaff(); }
+function sampleTicket(){
+  return {id:'W-'+todayTag()+'-000',ppl:2,round:'12:30',style:'buffet',wc:1,ahead:3,waitMin:15,issuedAt:new Date()};
+}
+async function staffTestPrint(){
+  const b=document.getElementById('p-test'); b.disabled=true; b.textContent='印刷中…';
+  await fontsReady();
+  const r=await Printer.print(renderTicketCanvas(sampleTicket()));
+  b.textContent='テスト印刷'; renderStaff();
+  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+}
+async function staffReprint(){
+  if(!lastTicket) return;
+  const b=document.getElementById('p-reprint'); b.disabled=true; b.textContent='印刷中…';
+  const r=await printTicket(lastTicket);
+  b.textContent='最後の整理券を再印刷'; renderStaff();
+}
+async function staffPreview(){
+  await fontsReady();
+  const c=renderTicketCanvas(lastTicket||sampleTicket());
+  document.getElementById('p-preview-img').src=c.toDataURL('image/png');
+  document.getElementById('p-preview').style.display='block';
+}
+
+// ════════════════════════════════════════════════════
+//  KIOSK BEHAVIOUR — idle reset, wake lock, no zoom/menu
+// ════════════════════════════════════════════════════
+let lastTouch=Date.now();
+function touch(){ lastTouch=Date.now(); }
+setInterval(()=>{
+  const staffOpen=document.getElementById('staff-ov').classList.contains('on')||document.getElementById('pin-ov').classList.contains('on');
+  if(staffOpen) return;
+  if(STEPS.includes(current)&&Date.now()-lastTouch>CONFIG.IDLE_SEC*1000) resetKiosk();
+},2000);
+document.addEventListener('pointerdown',touch,{capture:true});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('dblclick',e=>e.preventDefault());
+
+let wakeLock=null;
+async function requestWakeLock(){
+  try{ if('wakeLock' in navigator&&!wakeLock){ wakeLock=await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release',()=>{wakeLock=null;}); } }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ requestWakeLock(); loadDashboard(); } });
+
+// ── BOOT ─────────────────────────────────────────────
+bindHold(document.getElementById('w-hold'));
+bindHold(document.getElementById('w-logo'));
+bindHold(document.getElementById('tb-logo'));
+applyLang();
+renderDots();
+loadDashboard();
+setInterval(()=>{ if(current==='s-welcome') loadDashboard(); },30000);
+fontsReady();
+</script>
+</body>
+</html>

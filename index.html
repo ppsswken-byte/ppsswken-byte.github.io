@@ -710,11 +710,56 @@ async function loadSeatStatus(){
   }catch(e){ console.warn('loadSeatStatus error:',e); }
 }
 
+// ── 店頭キオスクの整理券 QR から開いた場合 (?t=整理番号) ──
+// LINE と整理券を連携し、呼び出し通知を LINE で受け取れるようにする
+function ticketParam(){
+  const p=new URLSearchParams(location.search);
+  if(p.get('t')) return p.get('t');
+  // LIFF の二次リダイレクト前は liff.state=?t=... の形で渡ってくる
+  const st=p.get('liff.state');
+  if(st){ try{ return new URLSearchParams(st.replace(/^[^?]*\?/,'')).get('t'); }catch(e){} }
+  return null;
+}
+const LINK_ERR={
+  'Ticket expired':'この整理券は有効期限が切れています（発券当日のみ有効です）。',
+  'Ticket not found':'整理券が見つかりませんでした。',
+  'Ticket closed':'この整理券はご入店済み、またはキャンセルされています。',
+  'Already linked to another LINE account':'この整理券は既に別のLINEアカウントと連携されています。',
+};
+async function openLinkedTicket(id){
+  if(!CONFIG.GAS_URL||!id) return;
+  try{
+    let d=null;
+    if(lineUserId){
+      const r=await fetch(CONFIG.GAS_URL+'?'+new URLSearchParams({action:'linkLine',id,lineUserId}));
+      d=await r.json();
+      if(d&&d.error&&/^Unknown action/.test(d.error)) d=null; // 旧バックエンド → 状態表示のみ
+    }
+    if(!d){
+      const r=await fetch(CONFIG.GAS_URL+'?'+new URLSearchParams({action:'getTicket',id}));
+      d=await r.json();
+      if(d&&!d.error&&['noshow','cancelled','checkin'].includes(d.status)) d={error:'Ticket closed'};
+    }
+    if(!d||d.error){ alert(LINK_ERR[d&&d.error]||('整理券を表示できませんでした。\n'+((d&&d.error)||''))); return; }
+    myTicketId=d.id;
+    _showTicket(d.id,d.ppl,d.round,Number(d.ahead)||0,Number(d.waitMin)||0);
+    showTab('ticket',document.querySelectorAll('.tab')[1]);
+    startPolling(d.id);
+    if(d.status==='called') simulateCall();
+  }catch(e){
+    console.warn('openLinkedTicket error:',e);
+  }finally{
+    try{ history.replaceState(null,'',location.pathname); }catch(e){}
+  }
+}
+
 // LIFF 初期化 (DOM 読み込み後)
-window.addEventListener('DOMContentLoaded',()=>{
-  initLiff();
+window.addEventListener('DOMContentLoaded',async()=>{
   loadSeatStatus();
   setInterval(loadSeatStatus,30000);
+  await initLiff();
+  const t=ticketParam();
+  if(t) openLinkedTicket(t);
 });
 </script>
 </body>
