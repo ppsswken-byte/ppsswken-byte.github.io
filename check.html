@@ -170,6 +170,25 @@ async function runAll(){
     setResult(t3, 'fail', 'ข้ามการตรวจ — backend เชื่อมต่อไม่ได้');
   }
 
+  // ── 3b. Kiosk LINE link (linkLine action) ──
+  const t3b = renderTest('linkline', 'Kiosk: ผูก LINE จาก QR บนบัตรคิว (linkLine)');
+  if (dashOk){
+    const k = await fetchJson({ action: 'linkLine' });
+    const kj = k.json;
+    if (kj && kj.error === 'id required'){
+      setResult(t3b, 'ok', 'Backend รองรับการผูก LINE จากบัตรคิวที่ปริ้นจากหน้าร้านแล้ว', null, null, k.ms);
+    } else if (kj && kj.error && String(kj.error).startsWith('Unknown action')){
+      setResult(t3b, 'warn',
+        'Backend ยัง<b>ไม่มี</b>คำสั่ง linkLine — ลูกค้าที่สแกน QR บนบัตรคิวจะดูสถานะได้ แต่<b>จะไม่ได้รับแจ้งเตือนทาง LINE</b>',
+        'Redeploy GAS: เปิด Apps Script → วางโค้ด gas-backend.gs เวอร์ชันล่าสุดทับ → 💾 บันทึก → Deploy → Manage deployments → เลือก deployment ที่ URL ตรงกับหน้าเว็บ → ✏️ Edit → Version: New version → Deploy',
+        null, k.ms);
+    } else {
+      setResult(t3b, 'warn', 'ตรวจไม่ได้ — คำตอบไม่ตรงรูปแบบ', null, k.text && k.text.slice(0, 300), k.ms);
+    }
+  } else {
+    setResult(t3b, 'fail', 'ข้ามการตรวจ — backend เชื่อมต่อไม่ได้');
+  }
+
   // ── 4. LIFF (LINE Login) ──
   const t4 = renderTest('liff', 'LINE LIFF (' + CONFIG.LIFF_ID + ')');
   if (typeof liff === 'undefined'){
