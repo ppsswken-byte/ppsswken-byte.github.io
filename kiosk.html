@@ -7,12 +7,13 @@
 <title>整理券発券機 — The Siam Heritage Tokyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@400;500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <!-- Star webPRNT SDK v1.10.0 (Star Micronics) — 「Star webPRNT Browser」アプリ内で mC-Print2 へ Bluetooth 印刷 -->
-<script src="lib/star/StarWebPrintBuilder.js"></script>
-<script src="lib/star/StarWebPrintTrader.js"></script>
+<!-- lib/ のファイルを更新したら ?v= の数字を上げる（iPad の古いキャッシュ対策） -->
+<script src="lib/star/StarWebPrintBuilder.js?v=3"></script>
+<script src="lib/star/StarWebPrintTrader.js?v=3"></script>
 <!-- QR Code Generator (MIT, Kazuhiko Arase) -->
-<script src="lib/qrcode.js"></script>
+<script src="lib/qrcode.js?v=3"></script>
 <!-- 整理券の描画・印刷（staff-dashboard と共通） -->
-<script src="lib/ticket.js"></script>
+<script src="lib/ticket.js?v=3"></script>
 <style>
 :root{
   --w:#FFFFFF;--ivory:#FAFAF8;--warm:#F5F2ED;--parchment:#EDE8DF;
@@ -879,30 +880,37 @@ function renderStaff(){
   document.getElementById('p-reprint').disabled=!Printer.inApp||!lastTicket;
   document.getElementById('tg-auto').classList.toggle('on',!!settings.autoPrint);
   document.getElementById('tg-cut').classList.toggle('on',!!settings.cut);
-  document.getElementById('p-ver').textContent=VERSION+' · '+CONFIG.PAPER_DOTS+' dots · '+(Printer.inApp?'webPRNT':'browser');
+  document.getElementById('p-ver').textContent=VERSION+' · ticket.js v'+(typeof TICKET_VERSION!=='undefined'?TICKET_VERSION:'古い')+' · '+CONFIG.PAPER_DOTS+' dots · '+(Printer.inApp?'webPRNT':'browser');
 }
 function toggleSetting(k){ settings[k]=!settings[k]; saveSettings(); renderStaff(); }
 function sampleTicket(){
   return {id:'W-'+todayTag()+'-000',ppl:2,round:'12:30',style:'buffet',wc:1,ahead:3,waitMin:15,issuedAt:new Date()};
 }
-async function staffTestPrint(){
-  const b=document.getElementById('p-test'); b.disabled=true; b.textContent='印刷中…';
-  await fontsReady();
-  const r=await Printer.print(renderTicketCanvas(sampleTicket()),{cut:settings.cut});
-  b.textContent='テスト印刷'; renderStaff();
-  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+// ボタンは必ず元に戻す（途中で失敗しても「印刷中…」のまま固まらない）
+const STALE_MSG='プログラムが古いままです。画面を再読み込みしてください（右上の ↻）';
+async function runStaffPrint(btnId,label,job){
+  const b=document.getElementById(btnId); b.disabled=true; b.textContent='印刷中…';
+  let r;
+  try{ r=await job(); }
+  catch(e){ r={ok:false,msg:(e instanceof TypeError?STALE_MSG:'印刷処理でエラー: '+e.message)}; }
+  finally{ b.textContent=label; renderStaff(); }
+  if(r) showStaffAlert(r.ok?'':'🖨 '+r.msg);
 }
-async function staffTextTest(){
-  const b=document.getElementById('p-test-text'); b.disabled=true; b.textContent='印刷中…';
-  const r=await Printer.printText(['THE SIAM HERITAGE','PRINTER TEST OK',new Date().toLocaleString('en-GB')],{cut:settings.cut});
-  b.textContent='文字だけテスト印刷'; renderStaff();
-  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+function staffTestPrint(){
+  return runStaffPrint('p-test','テスト印刷',async()=>{
+    await fontsReady();
+    return Printer.print(renderTicketCanvas(sampleTicket()),{cut:settings.cut});
+  });
 }
-async function staffReprint(){
+function staffTextTest(){
+  return runStaffPrint('p-test-text','文字だけテスト印刷',async()=>{
+    if(typeof Printer.printText!=='function') return {ok:false,msg:STALE_MSG};
+    return Printer.printText(['THE SIAM HERITAGE','PRINTER TEST OK',new Date().toLocaleString('en-GB')],{cut:settings.cut});
+  });
+}
+function staffReprint(){
   if(!lastTicket) return;
-  const b=document.getElementById('p-reprint'); b.disabled=true; b.textContent='印刷中…';
-  const r=await printTicket(lastTicket);
-  b.textContent='最後の整理券を再印刷'; renderStaff();
+  return runStaffPrint('p-reprint','最後の整理券を再印刷',()=>printTicket(lastTicket));
 }
 async function staffPreview(){
   await fontsReady();
