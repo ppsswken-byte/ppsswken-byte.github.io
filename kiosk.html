@@ -7,12 +7,13 @@
 <title>整理券発券機 — The Siam Heritage Tokyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Noto+Sans+JP:wght@400;500;700&family=Cormorant+Garamond:wght@400;600&display=swap" rel="stylesheet">
 <!-- Star webPRNT SDK v1.10.0 (Star Micronics) — 「Star webPRNT Browser」アプリ内で mC-Print2 へ Bluetooth 印刷 -->
-<script src="lib/star/StarWebPrintBuilder.js"></script>
-<script src="lib/star/StarWebPrintTrader.js"></script>
+<!-- lib/ のファイルを更新したら ?v= の数字を上げる（iPad の古いキャッシュ対策） -->
+<script src="lib/star/StarWebPrintBuilder.js?v=4"></script>
+<script src="lib/star/StarWebPrintTrader.js?v=4"></script>
 <!-- QR Code Generator (MIT, Kazuhiko Arase) -->
-<script src="lib/qrcode.js"></script>
+<script src="lib/qrcode.js?v=4"></script>
 <!-- 整理券の描画・印刷（staff-dashboard と共通） -->
-<script src="lib/ticket.js"></script>
+<script src="lib/ticket.js?v=4"></script>
 <style>
 :root{
   --w:#FFFFFF;--ivory:#FAFAF8;--warm:#F5F2ED;--parchment:#EDE8DF;
@@ -233,6 +234,16 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .preview{margin-top:12px;text-align:center;background:var(--warm);border-radius:10px;padding:12px}
 .preview img{max-width:100%;width:240px;border:1px solid var(--border);background:#fff}
 .p-ver{font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button{padding:14px 8px;border-radius:10px;background:var(--warm);border:2px solid var(--border);color:var(--br-mid);font-size:16px;line-height:1.35}
+.seg button small{display:block;font-size:12px;color:var(--text-dim)}
+.seg button.on{background:var(--br-mid);border-color:var(--br-mid);color:var(--ivory)}
+.seg button.on small{color:var(--br-pale)}
+.ip-row{display:flex;gap:8px;margin-top:12px}
+.ip-row input{flex:1;min-width:0;padding:14px 12px;font-size:20px;border:2px solid var(--border);border-radius:10px;font-family:ui-monospace,Menlo,monospace;background:#fff;color:var(--text)}
+.ip-row .p-btn{padding:14px 18px}
+.p-link{display:block;margin-top:10px;padding:12px;border-radius:10px;border:1px dashed var(--br-pale);color:var(--br-mid);font-size:15px;text-align:center;text-decoration:none}
+.p-hint{font-size:13px;color:var(--text-dim);line-height:1.7;margin-top:8px}
 .p-detail{margin-top:8px;padding:8px 10px;background:var(--warm);border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:var(--text-mid);word-break:break-all;white-space:pre-wrap}
 
 /* staff alert (printer problem) — only a small bar for staff */
@@ -463,6 +474,26 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
       <div class="preview" id="p-preview" style="display:none"><img id="p-preview-img" alt=""></div>
     </div>
     <div class="p-sec">
+      <div class="p-lbl">接続方法</div>
+      <div class="seg" id="seg-mode">
+        <button data-v="app" onclick="setPrinterMode('app')">webPRNT アプリ<small>iPad の設定で選んだプリンター</small></button>
+        <button data-v="lan" onclick="setPrinterMode('lan')">LAN 直接<small>プリンターの IP アドレス</small></button>
+      </div>
+      <div id="lan-box" style="display:none">
+        <div class="ip-row">
+          <input id="lan-ip" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="例: 192.168.1.50" onkeydown="if(event.key==='Enter')savePrinterIp()">
+          <button class="p-btn" onclick="savePrinterIp()">保存</button>
+        </div>
+        <a class="p-link" id="lan-cert" href="#" target="_blank" rel="noopener">🔒 証明書を許可する（プリンターの設定ページを開く）</a>
+        <div class="p-hint">はじめて使うとき: 上のボタンで開いたページの警告で「詳細を表示 → このWebサイトを閲覧」を選び、プリンターの画面が出たらこの画面に戻って「文字だけテスト印刷」を押してください。</div>
+      </div>
+      <div class="p-lbl" style="margin-top:16px">用紙の幅</div>
+      <div class="seg" id="seg-paper">
+        <button data-v="80" onclick="setPaper(80)">80mm<small>mC-Print3（576 ドット）</small></button>
+        <button data-v="58" onclick="setPaper(58)">58mm<small>mC-Print2（384 ドット）</small></button>
+      </div>
+    </div>
+    <div class="p-sec">
       <div class="p-lbl">設定</div>
       <div class="toggle-row"><span>発券時に自動で印刷する</span><button class="tg" id="tg-auto" onclick="toggleSetting('autoPrint')"></button></div>
       <div class="toggle-row"><span>印刷後に用紙をカットする</span><button class="tg" id="tg-cut" onclick="toggleSetting('cut')"></button></div>
@@ -479,7 +510,6 @@ const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbzWjYWC8Rvb05lHQ2GhYypNTVtezdc4V031-k_zn0DrLm-WGgV6iIB1aLSMxFrxucE1Yw/exec',   // Google Apps Script デプロイ URL
   LIFF_ID: '2009236977-HNXaG3GD',   // LINE LIFF ID（整理券の QR から LINE 連携に使用）
   STAFF_PIN: '1234',                // スタッフメニューの暗証番号（ロゴを3秒長押しで表示）
-  PAPER_DOTS: 384,                  // 印刷幅（mC-Print2 58mm = 384 ドット）
   IDLE_SEC: 60,                     // 操作途中で放置されたら最初の画面に戻るまでの秒数
   DONE_SEC: 25,                     // 発券完了画面から自動で戻るまでの秒数
 };
@@ -814,7 +844,7 @@ function setPrintState(s){
 }
 
 async function printTicket(tk){
-  if(!Printer.inApp){ setPrintState('none'); return {ok:false}; }
+  if(!Printer.ready){ setPrintState('none'); return {ok:false}; }
   setPrintState('busy');
   await fontsReady();
   const canvas=renderTicketCanvas(tk);
@@ -861,8 +891,21 @@ function openStaff(){ renderStaff(); document.getElementById('staff-ov').classLi
 function closeStaff(){ document.getElementById('staff-ov').classList.remove('on'); document.getElementById('p-preview').style.display='none'; }
 function renderStaff(){
   const env=document.getElementById('p-env');
-  if(Printer.inApp){ env.className='p-stat good'; env.textContent='✓ Star webPRNT Browser で動作中（iPad の設定で選択したプリンターに印刷します）'; }
-  else { env.className='p-stat bad'; env.innerHTML='✕ 通常のブラウザで開いています。印刷するには <b>Star webPRNT Browser</b> アプリでこのページを開いてください（発券は印刷なしで動作します）'; }
+  if(Printer.mode==='lan'){
+    if(Printer.host){ env.className='p-stat good'; env.textContent='✓ LAN で印刷します → '+Printer.host; }
+    else { env.className='p-stat bad'; env.textContent='✕ LAN: プリンターの IP アドレスを入力して「保存」を押してください（発券は印刷なしで動作します）'; }
+  }
+  else if(Printer.inApp){ env.className='p-stat good'; env.textContent='✓ Star webPRNT Browser で動作中（iPad の設定で選択したプリンターに印刷します）'; }
+  else { env.className='p-stat bad'; env.innerHTML='✕ 通常のブラウザで開いています。<b>Star webPRNT Browser</b> アプリで開くか、接続方法を「LAN 直接」にしてください（発券は印刷なしで動作します）'; }
+  document.querySelectorAll('#seg-mode button').forEach(b=>b.classList.toggle('on',b.dataset.v===Printer.mode));
+  const ps=typeof printerSettings!=='undefined'?printerSettings:{};   // 古い ticket.js が残っていても落ちないように
+  document.querySelectorAll('#seg-paper button').forEach(b=>b.classList.toggle('on',Number(b.dataset.v)===Number(ps.paper)));
+  document.getElementById('lan-box').style.display=Printer.mode==='lan'?'block':'none';
+  const ipEl=document.getElementById('lan-ip');
+  if(document.activeElement!==ipEl) ipEl.value=Printer.host;
+  const cert=document.getElementById('lan-cert');
+  cert.href=Printer.host?'https://'+Printer.host+'/':'#';
+  cert.style.opacity=Printer.host?'1':'.45';
   const last=document.getElementById('p-last');
   const det=document.getElementById('p-detail');
   if(Printer.last){
@@ -874,35 +917,50 @@ function renderStaff(){
     else det.style.display='none';
   }
   else { last.className='p-stat'; last.textContent='まだ印刷していません'; det.style.display='none'; }
-  document.getElementById('p-test').disabled=!Printer.inApp;
-  document.getElementById('p-test-text').disabled=!Printer.inApp;
-  document.getElementById('p-reprint').disabled=!Printer.inApp||!lastTicket;
+  document.getElementById('p-test').disabled=!Printer.ready;
+  document.getElementById('p-test-text').disabled=!Printer.ready;
+  document.getElementById('p-reprint').disabled=!Printer.ready||!lastTicket;
   document.getElementById('tg-auto').classList.toggle('on',!!settings.autoPrint);
   document.getElementById('tg-cut').classList.toggle('on',!!settings.cut);
-  document.getElementById('p-ver').textContent=VERSION+' · '+CONFIG.PAPER_DOTS+' dots · '+(Printer.inApp?'webPRNT':'browser');
+  document.getElementById('p-ver').textContent=VERSION+' · ticket.js v'+(typeof TICKET_VERSION!=='undefined'?TICKET_VERSION:'古い')+' · '+(typeof paperDots==='function'?paperDots():'?')+' dots · '+(Printer.label||(Printer.inApp?'webPRNT':'browser'));
 }
 function toggleSetting(k){ settings[k]=!settings[k]; saveSettings(); renderStaff(); }
+// 接続方法・用紙幅は lib/ticket.js の printerSettings（staff-dashboard と共通）
+function setPrinterMode(m){ printerSettings.mode=m; savePrinterSettings(); renderStaff(); if(m==='lan'&&!Printer.host) document.getElementById('lan-ip').focus(); }
+function savePrinterIp(){
+  const el=document.getElementById('lan-ip');
+  printerSettings.ip=cleanPrinterHost(el.value); savePrinterSettings();
+  el.blur(); renderStaff();
+}
+function setPaper(mm){ printerSettings.paper=mm; savePrinterSettings(); renderStaff(); document.getElementById('p-preview').style.display='none'; }
 function sampleTicket(){
   return {id:'W-'+todayTag()+'-000',ppl:2,round:'12:30',style:'buffet',wc:1,ahead:3,waitMin:15,issuedAt:new Date()};
 }
-async function staffTestPrint(){
-  const b=document.getElementById('p-test'); b.disabled=true; b.textContent='印刷中…';
-  await fontsReady();
-  const r=await Printer.print(renderTicketCanvas(sampleTicket()),{cut:settings.cut});
-  b.textContent='テスト印刷'; renderStaff();
-  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+// ボタンは必ず元に戻す（途中で失敗しても「印刷中…」のまま固まらない）
+const STALE_MSG='プログラムが古いままです。画面を再読み込みしてください（右上の ↻）';
+async function runStaffPrint(btnId,label,job){
+  const b=document.getElementById(btnId); b.disabled=true; b.textContent='印刷中…';
+  let r;
+  try{ r=await job(); }
+  catch(e){ r={ok:false,msg:(e instanceof TypeError?STALE_MSG:'印刷処理でエラー: '+e.message)}; }
+  finally{ b.textContent=label; renderStaff(); }
+  if(r) showStaffAlert(r.ok?'':'🖨 '+r.msg);
 }
-async function staffTextTest(){
-  const b=document.getElementById('p-test-text'); b.disabled=true; b.textContent='印刷中…';
-  const r=await Printer.printText(['THE SIAM HERITAGE','PRINTER TEST OK',new Date().toLocaleString('en-GB')],{cut:settings.cut});
-  b.textContent='文字だけテスト印刷'; renderStaff();
-  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+function staffTestPrint(){
+  return runStaffPrint('p-test','テスト印刷',async()=>{
+    await fontsReady();
+    return Printer.print(renderTicketCanvas(sampleTicket()),{cut:settings.cut});
+  });
 }
-async function staffReprint(){
+function staffTextTest(){
+  return runStaffPrint('p-test-text','文字だけテスト印刷',async()=>{
+    if(typeof Printer.printText!=='function') return {ok:false,msg:STALE_MSG};
+    return Printer.printText(['THE SIAM HERITAGE','PRINTER TEST OK',new Date().toLocaleString('en-GB')],{cut:settings.cut});
+  });
+}
+function staffReprint(){
   if(!lastTicket) return;
-  const b=document.getElementById('p-reprint'); b.disabled=true; b.textContent='印刷中…';
-  const r=await printTicket(lastTicket);
-  b.textContent='最後の整理券を再印刷'; renderStaff();
+  return runStaffPrint('p-reprint','最後の整理券を再印刷',()=>printTicket(lastTicket));
 }
 async function staffPreview(){
   await fontsReady();

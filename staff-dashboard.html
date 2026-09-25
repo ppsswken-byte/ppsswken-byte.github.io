@@ -7,10 +7,11 @@
 <title>受付管理 — The Siam Heritage Tokyo</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- 整理券の印刷（受付機 kiosk.html と共通。Star webPRNT Browser アプリ内なら mC-Print2 に直接印刷） -->
-<script src="lib/star/StarWebPrintBuilder.js"></script>
-<script src="lib/star/StarWebPrintTrader.js"></script>
-<script src="lib/qrcode.js"></script>
-<script src="lib/ticket.js"></script>
+<!-- lib/ のファイルを更新したら ?v= の数字を上げる（iPad の古いキャッシュ対策） -->
+<script src="lib/star/StarWebPrintBuilder.js?v=4"></script>
+<script src="lib/star/StarWebPrintTrader.js?v=4"></script>
+<script src="lib/qrcode.js?v=4"></script>
+<script src="lib/ticket.js?v=4"></script>
 <style>
 /* 文字サイズは html の font-size で一括調整（設定 → 文字の大きさ） */
 html{font-size:18px}
@@ -191,10 +192,11 @@ button:disabled{opacity:.45;cursor:default}
 
 #print-area{display:none}
 @media print{
-  @page{size:58mm auto;margin:0}
+  @page{size:80mm auto;margin:0}
   body>*:not(#print-area){display:none!important}
   #print-area{display:block!important}
-  #print-area img{width:58mm}
+  #print-area img{width:72mm}
+  #print-area.p58 img{width:48mm}
 }
 
 /* ── PORTRAIT / NARROW: stack columns ── */
@@ -338,6 +340,16 @@ button:disabled{opacity:.45;cursor:default}
       <div class="note">「自動」は上の時間でランチ／ディナー映像に切り替わります。TV には30秒以内に反映されます。</div>
     </div>
     <div class="sec">
+      <div class="sec-t">整理券プリンター（この端末）</div>
+      <div class="choice ch-3" id="pr-modes"></div>
+      <div id="pr-lan" style="display:none;margin-top:.5rem">
+        <div class="acts"><input class="text-in" id="pr-ip" type="text" inputmode="decimal" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="プリンターの IP 例: 192.168.1.50" onkeydown="if(event.key==='Enter')savePrIp()" style="flex:1"><button class="btn b-sub" onclick="savePrIp()">保存</button></div>
+        <a class="btn b-no-plain" id="pr-cert" href="#" target="_blank" rel="noopener" style="display:flex;margin-top:.5rem;text-decoration:none">🔒 証明書を許可する（初回のみ）</a>
+      </div>
+      <div class="choice ch-2" id="pr-paper" style="margin-top:.5rem"></div>
+      <div class="note" id="pr-note"></div>
+    </div>
+    <div class="sec">
       <div class="sec-t">整理券番号のリセット</div>
       <div class="acts"><button class="btn b-no grow" onclick="confirmReset()">↺ 本日の番号をリセット</button></div>
       <div class="note">翌日の営業開始前だけ使ってください。</div>
@@ -351,7 +363,7 @@ button:disabled{opacity:.45;cursor:default}
     <div class="dlg-title">🖨 整理券 <button class="dlg-x" onclick="closeOv('ov-print')">閉じる</button></div>
     <img class="preview-img" id="print-img" alt="">
     <div class="dlg-acts"><button class="btn b-brand" onclick="browserPrint()">印刷する</button></div>
-    <div class="note">この端末から直接印刷するには、Star webPRNT Browser アプリでこのページを開いてください。</div>
+    <div class="note">この端末から直接印刷するには、⚙ 設定 → 整理券プリンター で「LAN 直接」を選ぶか、Star webPRNT Browser アプリでこのページを開いてください。</div>
   </div>
 </div>
 
@@ -702,7 +714,27 @@ function applyFs(k){
 function getFs(){ try{ return localStorage.getItem('staffFontSize')||'fs-m'; }catch(e){ return 'fs-m'; } }
 function setFs(k){ try{ localStorage.setItem('staffFontSize',k); }catch(e){} applyFs(k); renderFs(); }
 function renderFs(){ const cur=getFs(); document.getElementById('fs-choice').innerHTML=FS.map(([k,l])=>`<button class="opt${cur===k?' sel':''}" onclick="setFs('${k}')">${l}</button>`).join(''); }
-function openSettings(){ renderFs(); renderTv(); openOv('ov-settings'); }
+function openSettings(){ renderFs(); renderTv(); renderPr(); openOv('ov-settings'); }
+
+// ── 設定: 整理券プリンター（lib/ticket.js の printerSettings）──
+const PR_MODES=[['app','webPRNT アプリ','Bluetooth など'],['lan','LAN 直接','IP アドレス'],['off','使わない','画面で印刷']];
+function renderPr(){
+  if(typeof printerSettings==='undefined') return;
+  const m=printerSettings.mode||'app';
+  document.getElementById('pr-modes').innerHTML=PR_MODES.map(([k,l,sub])=>`<button class="opt${m===k?' sel':''}" onclick="setPrMode('${k}')">${l}<small>${sub}</small></button>`).join('');
+  document.getElementById('pr-paper').innerHTML=[[80,'80mm','mC-Print3'],[58,'58mm','mC-Print2']].map(([mm,l,sub])=>`<button class="opt${Number(printerSettings.paper)===mm?' sel':''}" onclick="setPrPaper(${mm})">${l}<small>${sub}</small></button>`).join('');
+  document.getElementById('pr-lan').style.display=m==='lan'?'block':'none';
+  const ip=document.getElementById('pr-ip'); if(document.activeElement!==ip) ip.value=Printer.host;
+  const cert=document.getElementById('pr-cert'); cert.href=Printer.host?'https://'+Printer.host+'/':'#'; cert.style.opacity=Printer.host?'1':'.45';
+  document.getElementById('pr-note').textContent=
+    m==='off'?'🖨 整理券ボタンで画面に整理券を表示し、ブラウザの印刷機能で印刷します。'
+    :Printer.ready?'✓ '+Printer.label+' で印刷します。'
+    :m==='lan'?'プリンターの IP アドレスを入力して「保存」を押してください。'
+    :'この端末は Star webPRNT Browser アプリではないため、画面での印刷になります。';
+}
+function setPrMode(k){ printerSettings.mode=k; savePrinterSettings(); renderPr(); }
+function savePrIp(){ const el=document.getElementById('pr-ip'); printerSettings.ip=cleanPrinterHost(el.value); savePrinterSettings(); el.blur(); renderPr(); toast(Printer.host?'🖨 プリンターの IP を保存しました':'IP アドレスを入力してください',Printer.host?'ok':'err'); }
+function setPrPaper(mm){ printerSettings.paper=mm; savePrinterSettings(); renderPr(); }
 
 // ── 設定: TV 映像 ────────────────────────────────────
 const TV_MODES=[['auto','自動'],['lunch','ランチ'],['dinner','ディナー'],['off','ロゴ']];
@@ -755,7 +787,7 @@ async function printFor(id){
   const q=data.find(x=>x.id===id); if(!q) return;
   await fontsReady();
   const canvas=renderTicketCanvas(ticketFor(q));
-  if(Printer.inApp){
+  if(printerSettings.mode!=='off'&&Printer.ready){
     toast('🖨 印刷しています…','warn');
     const r=await Printer.print(canvas);
     toast(r.ok?`🖨 ${id} の整理券を印刷しました`:'🖨 '+r.msg,r.ok?'ok':'err');
@@ -766,6 +798,7 @@ async function printFor(id){
 }
 function browserPrint(){
   const pa=document.getElementById('print-area');
+  pa.className=Number(printerSettings.paper)===58?'p58':'';
   pa.innerHTML=`<img src="${document.getElementById('print-img').src}" alt="">`;
   window.print();
   setTimeout(()=>{ pa.innerHTML=''; },1500);
