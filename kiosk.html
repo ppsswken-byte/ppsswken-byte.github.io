@@ -233,6 +233,7 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
 .preview{margin-top:12px;text-align:center;background:var(--warm);border-radius:10px;padding:12px}
 .preview img{max-width:100%;width:240px;border:1px solid var(--border);background:#fff}
 .p-ver{font-size:12px;color:var(--text-dim);text-align:center;margin-top:10px}
+.p-detail{margin-top:8px;padding:8px 10px;background:var(--warm);border-radius:8px;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.6;color:var(--text-mid);word-break:break-all;white-space:pre-wrap}
 
 /* staff alert (printer problem) — only a small bar for staff */
 .staff-alert{position:fixed;left:0;right:0;bottom:0;z-index:90;background:var(--red);color:#fff;text-align:center;padding:10px 16px;font-size:15px;letter-spacing:1px;display:none}
@@ -449,10 +450,12 @@ button{font-family:inherit;color:inherit;border:0;background:none;cursor:pointer
       <div class="p-lbl">プリンター</div>
       <div class="p-stat" id="p-env"></div>
       <div class="p-stat" id="p-last" style="margin-top:6px"></div>
+      <div class="p-detail" id="p-detail" style="display:none"></div>
     </div>
     <div class="p-sec">
       <div class="p-btns">
         <button class="p-btn" id="p-test" onclick="staffTestPrint()">テスト印刷</button>
+        <button class="p-btn" id="p-test-text" onclick="staffTextTest()">文字だけテスト印刷</button>
         <button class="p-btn" id="p-reprint" onclick="staffReprint()">最後の整理券を再印刷</button>
         <button class="p-btn alt" onclick="staffPreview()">印刷プレビュー</button>
         <button class="p-btn alt" onclick="location.reload()">画面を再読み込み</button>
@@ -861,9 +864,18 @@ function renderStaff(){
   if(Printer.inApp){ env.className='p-stat good'; env.textContent='✓ Star webPRNT Browser で動作中（iPad の設定で選択したプリンターに印刷します）'; }
   else { env.className='p-stat bad'; env.innerHTML='✕ 通常のブラウザで開いています。印刷するには <b>Star webPRNT Browser</b> アプリでこのページを開いてください（発券は印刷なしで動作します）'; }
   const last=document.getElementById('p-last');
-  if(Printer.last){ last.className='p-stat '+(Printer.last.ok?'good':'bad'); last.textContent=`最後の印刷 ${hhmm(Printer.last.at)} — ${Printer.last.msg}`; }
-  else { last.className='p-stat'; last.textContent='まだ印刷していません'; }
+  const det=document.getElementById('p-detail');
+  if(Printer.last){
+    const kind=Printer.last.kind==='text'?'（文字だけ）':'';
+    last.className='p-stat '+(Printer.last.ok?'good':'bad'); last.textContent=`最後の印刷${kind} ${hhmm(Printer.last.at)} — ${Printer.last.msg}`;
+    const d=Printer.last.detail;
+    // 原因調査用: この欄をスクリーンショットで送ってもらう
+    if(d){ det.style.display='block'; det.textContent=`詳細: code=${d.code!=null?d.code:'-'} status=${d.statusBytes||'-'} http=${d.http!=null?d.http:'-'}\n${d.raw||''}`; }
+    else det.style.display='none';
+  }
+  else { last.className='p-stat'; last.textContent='まだ印刷していません'; det.style.display='none'; }
   document.getElementById('p-test').disabled=!Printer.inApp;
+  document.getElementById('p-test-text').disabled=!Printer.inApp;
   document.getElementById('p-reprint').disabled=!Printer.inApp||!lastTicket;
   document.getElementById('tg-auto').classList.toggle('on',!!settings.autoPrint);
   document.getElementById('tg-cut').classList.toggle('on',!!settings.cut);
@@ -878,6 +890,12 @@ async function staffTestPrint(){
   await fontsReady();
   const r=await Printer.print(renderTicketCanvas(sampleTicket()),{cut:settings.cut});
   b.textContent='テスト印刷'; renderStaff();
+  showStaffAlert(r.ok?'':'🖨 '+r.msg);
+}
+async function staffTextTest(){
+  const b=document.getElementById('p-test-text'); b.disabled=true; b.textContent='印刷中…';
+  const r=await Printer.printText(['THE SIAM HERITAGE','PRINTER TEST OK',new Date().toLocaleString('en-GB')],{cut:settings.cut});
+  b.textContent='文字だけテスト印刷'; renderStaff();
   showStaffAlert(r.ok?'':'🖨 '+r.msg);
 }
 async function staffReprint(){
